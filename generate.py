@@ -63,7 +63,13 @@ def pull_prs() -> list[dict]:
 
 def load_prs() -> list[dict]:
     cache = HERE / "prs.json"
-    prs = json.loads(cache.read_text()) if cache.exists() else pull_prs()
+    if cache.exists() and cache.read_text().strip():
+        prs = json.loads(cache.read_text())
+    else:
+        prs = pull_prs()
+    if not prs:
+        raise SystemExit("no PRs to render (empty prs.json) - refusing to write "
+                         "an empty board")
     cache.write_text(json.dumps(prs, indent=1))
     return prs
 
@@ -227,11 +233,12 @@ def row(pr: dict, now: datetime, verdicts: dict[int, dict]) -> str:
     churn = (pr.get("additions", 0) or 0) + (pr.get("deletions", 0) or 0)
     appr = approvals(pr)
     appr_cell = f'<span class="appr">&check;{appr}</span>' if appr else ""
+    login = (pr.get("author") or {}).get("login") or "ghost"
     return (
         f'<tr>'
         f'<td class="num"><a href="https://github.com/{REPO}/pull/{n}">#{n}</a></td>'
         f'<td class="ttl"><span class="ttl-t">{html.escape(pr["title"])}</span>{flags(pr)}</td>'
-        f'<td class="who">{html.escape(pr["author"]["login"])}</td>'
+        f'<td class="who">{html.escape(login)}</td>'
         f'<td><span class="tag tag--{kind}">{kind}</span></td>'
         f'{audit_cell(pr, verdicts)}'
         f'<td class="mono">{age}d</td>'

@@ -34,12 +34,19 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          for i in 1 2 3 4 5; do
-            gh pr list -R google-deepmind/formal-conjectures --state open --limit 200 \
-              --json number,title,author,labels,isDraft,createdAt,updatedAt,statusCheckRollup,reviewDecision,mergeStateStatus,latestReviews,additions,deletions,files \
-              > prs.json && python3 -c "import json,sys; sys.exit(0 if json.load(open('prs.json')) else 1)" && break
-            echo "attempt $i failed, retrying..."; sleep 15
+          ok=0
+          for i in 1 2 3 4 5 6; do
+            if gh pr list -R google-deepmind/formal-conjectures --state open --limit 200 \
+                 --json number,title,author,labels,isDraft,createdAt,updatedAt,statusCheckRollup,reviewDecision,mergeStateStatus,latestReviews,additions,deletions,files \
+                 > prs.json 2>fetch_err.txt \
+               && python3 -c "import json,sys; sys.exit(0 if json.load(open('prs.json')) else 1)"; then
+              ok=1; break
+            fi
+            echo "attempt $i failed: $(tail -c 160 fetch_err.txt)"; sleep 20
           done
+          # Fail the run rather than deploy a broken board; the last good
+          # deploy stays and the hourly cron retries once GitHub recovers.
+          [ "$ok" = 1 ] || { echo "::error::could not fetch PRs after 6 attempts (GitHub GraphQL likely degraded)"; exit 1; }
 
       - name: Fetch audit feed
         env:
