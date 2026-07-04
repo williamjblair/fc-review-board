@@ -48,6 +48,13 @@ FINDING_URL = "https://erdos.constellate.science/finding.html?n={n}"
 ERDOS_URL = "https://www.erdosproblems.com/{n}"
 ERDOS_FILE_RE = re.compile(r"ErdosProblems/(\d+)\.lean")
 
+# Connective links (not branding: data provenance + how-it-works pointers).
+FRONTIER_URL = "https://erdos.constellate.science"
+METHOD_URL = "https://erdos.constellate.science/method.html"
+FC_REPO_URL = f"https://github.com/{REPO}"
+FC_SITE_URL = "https://google-deepmind.github.io/formal-conjectures"
+BOARD_REPO_URL = "https://github.com/williamjblair/fc-review-board"
+
 # --- data -----------------------------------------------------------------
 # A single `gh pr list --json ...files...` over ~200 PRs asks GitHub for tens
 # of thousands of nodes in one query and reliably 502s. Paginate instead: small
@@ -240,6 +247,16 @@ ROLLUP = [("ab--signed", "signed"), ("ab--discrepancy", "unfaithful"),
 ROLLUP_THRESHOLD = 8
 
 
+def _assumptions(row: dict) -> str:
+    """Readable form of the Prop hypotheses a conditional proof rests on:
+    'hconv : Erdos94.ConvexPosition P' -> 'ConvexPosition P'."""
+    labels = []
+    for na in row.get("named_assumptions") or []:
+        t = na.split(":", 1)[-1].strip()
+        labels.append(re.sub(r"\bErdos\d+\.", "", t))
+    return ", ".join(labels)
+
+
 def audit_class(row: dict | None) -> tuple[str, str]:
     """Map an audit row to a (badge-class, tooltip-note). The base color comes
     from the machine verdict; a signed human verdict overrides it."""
@@ -255,9 +272,10 @@ def audit_class(row: dict | None) -> tuple[str, str]:
     if signed == "variant":
         return "ab--variant", f"signed variant by {by}"
     if mv == "unconditional":
-        return "ab--unconditional", "machine: unconditional"
+        return "ab--unconditional", "machine-checked, unconditional"
     if mv == "conditional":
-        return "ab--conditional", "machine: conditional"
+        asm = _assumptions(row)
+        return "ab--conditional", "conditional" + (f" — assumes {asm}" if asm else "")
     return "ab--unaudited", f"not yet audited ({row.get('bucket', 'open')})"
 
 
@@ -336,10 +354,67 @@ def table(prs: list[dict], now: datetime, verdicts: dict[int, dict],
     key = (lambda p: -days_since(p["updatedAt"], now)) if sort_idle \
         else (lambda p: -days_since(p["createdAt"], now))
     body = "".join(row(p, now, verdicts) for p in sorted(prs, key=key))
-    head = ("<tr><th>PR</th><th>title</th><th>author</th><th>kind</th>"
-            "<th>audit</th><th>open</th><th>idle</th><th>CI</th>"
-            "<th>&check;</th><th>&pm;</th></tr>")
-    return f'<table><thead>{head}</thead><tbody>{body}</tbody></table>'
+    head = ('<tr><th scope="col">PR</th><th scope="col">title</th>'
+            '<th scope="col">author</th><th scope="col">kind</th>'
+            '<th scope="col">audit</th><th scope="col">open</th>'
+            '<th scope="col">idle</th><th scope="col">CI</th>'
+            '<th scope="col">&check;</th><th scope="col">&pm;</th></tr>')
+    return (f'<div class="scroll"><table>'
+            f'<thead>{head}</thead><tbody>{body}</tbody></table></div>')
+
+
+# Highest-to-lowest so a PR's readout status is the most notable thing the
+# audit found among its problems (a caution outranks good news).
+SEVERITY = ["ab--discrepancy", "ab--conditional", "ab--variant",
+            "ab--signed", "ab--unconditional"]
+
+
+def pr_top_status(pr: dict, verdicts: dict[int, dict]) -> str | None:
+    classes = {audit_class(verdicts.get(n))[0] for n in problem_numbers(pr)}
+    for s in SEVERITY:
+        if s in classes:
+            return s
+    return None
+
+
+def stat(value, label: str, cls: str = "") -> str:
+    sv = f'<span class="sv {cls}">{value}</span>' if cls else f'<span class="sv">{value}</span>'
+    return f'<div class="stat">{sv} <span class="sl">{label}</span></div>'
+
+
+def build_strip(prs, buckets, verdicts, now) -> str:
+    n_stmt = sum(1 for p in buckets["review"] if is_statement(p))
+    oldest = max((days_since(p["createdAt"], now) for p in buckets["review"]), default=0)
+    queue = "".join([
+        stat(len(prs), "open"),
+        stat(len(buckets["review"]), "ready to review"),
+        stat(n_stmt, "statements"),
+        stat(f"{oldest}d", "oldest waiting"),
+    ])
+    strip = f'<div class="grp">{queue}</div>'
+    if verdicts:  # fidelity readout, over the acted-on set (ready + approved)
+        actionable = buckets["review"] + buckets["approved"]
+        top = [pr_top_status(p, verdicts) for p in actionable]
+        fidelity = "".join([
+            stat(top.count("ab--signed"), "signed faithful", "sv--gold"),
+            stat(top.count("ab--conditional") + top.count("ab--variant"),
+                 "conditional", "sv--brass"),
+            stat(top.count("ab--discrepancy"), "flagged", "sv--cinnabar"),
+        ])
+        strip += f'<div class="grp grp--audit">{fidelity}</div>'
+    return f'<div class="strip">{strip}</div>'
+
+
+def build_key(verdicts) -> str:
+    if not verdicts:
+        return ""
+    items = [("kd--moss", "unconditional"), ("kd--brass", "conditional"),
+             ("kd--stone", "not yet audited"), ("kd--gold", "signed by a reviewer"),
+             ("kd--cinnabar", "flagged unfaithful")]
+    keys = "".join(f'<span class="item"><span class="kd {c}"></span>{t}</span>'
+                   for c, t in items)
+    return (f'<div class="key" role="group" aria-label="Audit column key">'
+            f'<span class="key-t">audit</span>{keys}</div>')
 
 
 def main() -> None:
@@ -349,13 +424,6 @@ def main() -> None:
     buckets: dict[str, list[dict]] = {"review": [], "author": [], "draft": [], "approved": []}
     for p in prs:
         buckets[classify(p)].append(p)
-
-    stmt_review = [p for p in buckets["review"] if is_statement(p)]
-    oldest = max((days_since(p["createdAt"], now) for p in buckets["review"]), default=0)
-    n_audited = sum(1 for p in buckets["review"]
-                    if any(verdicts.get(k, {}).get("machine_verdict")
-                           for k in problem_numbers(p)))
-    stamp = now.strftime("%Y-%m-%d %H:%M UTC")
 
     sections = []
     if buckets["approved"]:
@@ -368,131 +436,176 @@ def main() -> None:
     for title, group, idle in sections:
         if not group:
             continue
-        parts.append(f'<section><h2>{title} <span class="n">{len(group)}</span></h2>'
+        parts.append(f'<section><div class="sec-h"><h2>{title}</h2>'
+                     f'<span class="n">{len(group)}</span></div>'
                      f'{table(group, now, verdicts, sort_idle=idle)}</section>')
 
     doc = TEMPLATE.format(
-        stamp=stamp,
-        total=len(prs),
-        n_review=len(buckets["review"]),
-        n_stmt=len(stmt_review),
-        oldest=oldest,
+        stamp=now.strftime("%Y-%m-%d %H:%M UTC"),
+        strip=build_strip(prs, buckets, verdicts, now),
+        key=build_key(verdicts),
         sections="\n".join(parts),
+        fc_repo=FC_REPO_URL, fc_site=FC_SITE_URL, board_repo=BOARD_REPO_URL,
+        frontier=FRONTIER_URL, method=METHOD_URL,
     )
     (HERE / "index.html").write_text(doc)
-    print(f"wrote index.html - {len(prs)} PRs, "
-          f"{len(buckets['review'])} ready for review "
-          f"({len(stmt_review)} statements, {n_audited} with an audit verdict), "
-          f"oldest waiting {oldest}d")
+    n_stmt = sum(1 for p in buckets["review"] if is_statement(p))
+    print(f"wrote index.html - {len(prs)} PRs, {len(buckets['review'])} ready "
+          f"for review ({n_stmt} statements), oldest waiting "
+          f"{max((days_since(p['createdAt'], now) for p in buckets['review']), default=0)}d")
 
 
 TEMPLATE = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>formal-conjectures &middot; review queue</title>
 <style>
 :root {{
-  --paper: oklch(97.5% 0.006 250); --card: oklch(99% 0.004 250);
-  --ink0: oklch(28% 0.02 260); --ink1: oklch(45% 0.02 260); --ink2: oklch(62% 0.02 260);
-  --rule: oklch(90% 0.01 255); --accent: oklch(52% 0.13 250);
-  --ok: oklch(62% 0.13 150); --bad: oklch(60% 0.19 25); --run: oklch(75% 0.13 85);
-  --stmt: oklch(52% 0.13 250); --infra: oklch(60% 0.02 260);
-  --moss: oklch(58% 0.11 150); --brass: oklch(64% 0.11 75); --gold: oklch(74% 0.13 85);
-  --stone: oklch(66% 0.015 260); --cinnabar: oklch(58% 0.19 25);
+  --paper: oklch(98.4% 0.004 265); --panel: oklch(96.4% 0.006 265); --card: oklch(99.4% 0.002 265);
+  --ink0: oklch(27% 0.02 265); --ink1: oklch(44% 0.018 265); --ink2: oklch(57% 0.015 265);
+  --rule: oklch(91% 0.008 265); --rule2: oklch(85% 0.012 265); --hover: oklch(27% 0.02 265);
+  --accent: oklch(52% 0.13 255);
+  --ok: oklch(60% 0.13 150); --bad: oklch(57% 0.2 25); --run: oklch(70% 0.14 78);
+  --stmt: oklch(52% 0.13 255); --infra: oklch(55% 0.015 265);
+  --moss: oklch(55% 0.11 150); --brass: oklch(56% 0.11 70); --gold: oklch(68% 0.13 85);
+  --stone: oklch(60% 0.015 265); --cinnabar: oklch(55% 0.19 25);
+}}
+@media (prefers-color-scheme: dark) {{
+  :root {{
+    --paper: oklch(18.5% 0.02 265); --panel: oklch(23% 0.02 265); --card: oklch(21.5% 0.018 265);
+    --ink0: oklch(92% 0.01 265); --ink1: oklch(75% 0.014 265); --ink2: oklch(60% 0.014 265);
+    --rule: oklch(30% 0.015 265); --rule2: oklch(38% 0.018 265); --hover: oklch(92% 0.01 265);
+    --accent: oklch(75% 0.12 255);
+    --ok: oklch(72% 0.13 150); --bad: oklch(68% 0.19 25); --run: oklch(80% 0.13 78);
+    --stmt: oklch(75% 0.12 255); --infra: oklch(66% 0.015 265);
+    --moss: oklch(74% 0.12 150); --brass: oklch(77% 0.11 74); --gold: oklch(82% 0.12 85);
+    --stone: oklch(68% 0.02 265); --cinnabar: oklch(71% 0.18 25);
+  }}
 }}
 * {{ box-sizing: border-box; }}
 body {{ margin: 0; background: var(--paper); color: var(--ink0);
-  font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }}
-.wrap {{ max-width: 1120px; margin: 0 auto; padding: 40px 24px 80px; }}
-header {{ margin-bottom: 28px; }}
-h1 {{ font-size: 26px; font-weight: 600; letter-spacing: -.01em; margin: 0 0 4px; }}
-.sub {{ color: var(--ink2); font-size: 13px; }}
-.cards {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 22px 0 34px; }}
-.card {{ background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 14px 16px; }}
-.card .v {{ font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }}
-.card .k {{ font-size: 12px; color: var(--ink2); margin-top: 2px; }}
-section {{ margin: 30px 0; }}
-h2 {{ font-size: 16px; font-weight: 600; margin: 0 0 10px; display: flex; align-items: baseline; gap: 8px; }}
-h2 .n {{ font-size: 13px; color: var(--ink2); font-weight: 500; font-variant-numeric: tabular-nums; }}
-.scroll {{ overflow-x: auto; }}
-table {{ width: 100%; border-collapse: collapse; background: var(--card);
-  border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; }}
+  font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased; }}
+.wrap {{ max-width: 1120px; margin: 0 auto; padding: 44px 24px 72px; }}
+a {{ color: var(--accent); }}
+:focus-visible {{ outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }}
+
+header {{ margin-bottom: 4px; }}
+h1 {{ font-size: 23px; font-weight: 640; letter-spacing: -.015em; margin: 0 0 7px; }}
+h1 .h1-sub {{ color: var(--ink2); font-weight: 460; }}
+.lede {{ margin: 0; max-width: 64ch; color: var(--ink1); font-size: 14.5px; line-height: 1.55; }}
+.meta {{ margin-top: 11px; font-size: 12.5px; color: var(--ink2); }}
+.meta a {{ color: var(--ink1); text-decoration: none; border-bottom: 1px solid var(--rule2); }}
+.meta a:hover {{ color: var(--accent); border-color: var(--accent); }}
+.sep {{ margin: 0 8px; color: var(--rule2); }}
+
+.strip {{ display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px 26px;
+  padding: 15px 18px; margin: 22px 0 12px; background: var(--panel);
+  border: 1px solid var(--rule); border-radius: 12px; }}
+.grp {{ display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: baseline; }}
+.grp--audit {{ position: relative; padding-left: 26px; }}
+.grp--audit::before {{ content: ""; position: absolute; left: 0; top: 3px; bottom: 3px;
+  width: 1px; background: var(--rule2); }}
+.stat {{ display: flex; align-items: baseline; gap: 6px; }}
+.sv {{ font-size: 19px; font-weight: 660; font-variant-numeric: tabular-nums;
+  letter-spacing: -.01em; color: var(--ink0); }}
+.sl {{ font-size: 12.5px; color: var(--ink2); }}
+.sv--gold {{ color: color-mix(in oklab, var(--gold) 72%, var(--ink1)); }}
+.sv--brass {{ color: var(--brass); }}
+.sv--cinnabar {{ color: var(--cinnabar); }}
+
+.key {{ display: flex; flex-wrap: wrap; align-items: center; gap: 7px 15px;
+  margin: 0 2px 22px; font-size: 12px; color: var(--ink2); }}
+.key-t {{ font-weight: 640; color: var(--ink1); text-transform: uppercase;
+  letter-spacing: .06em; font-size: 10.5px; }}
+.key .item {{ display: inline-flex; align-items: center; gap: 6px; }}
+.kd {{ width: 11px; height: 11px; border-radius: 4px; display: inline-block; border: 1px solid transparent; }}
+.kd--moss {{ background: color-mix(in oklab, var(--moss) 52%, transparent); }}
+.kd--brass {{ background: color-mix(in oklab, var(--brass) 58%, transparent); }}
+.kd--stone {{ background: color-mix(in oklab, var(--stone) 40%, transparent); }}
+.kd--gold {{ background: color-mix(in oklab, var(--moss) 30%, transparent); border-color: var(--gold); }}
+.kd--cinnabar {{ background: color-mix(in oklab, var(--cinnabar) 42%, transparent); }}
+
+section {{ margin: 26px 0; }}
+.sec-h {{ display: flex; align-items: baseline; gap: 8px; margin: 0 0 9px; }}
+.sec-h h2 {{ font-size: 14px; font-weight: 640; margin: 0; letter-spacing: -.005em; }}
+.sec-h .n {{ font-size: 12px; color: var(--ink2); font-weight: 500; font-variant-numeric: tabular-nums; }}
+.scroll {{ overflow-x: auto; border: 1px solid var(--rule); border-radius: 12px; }}
+table {{ width: 100%; border-collapse: collapse; background: var(--card); }}
 th {{ text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
-  color: var(--ink2); font-weight: 600; padding: 9px 12px; border-bottom: 1px solid var(--rule); white-space: nowrap; }}
+  color: var(--ink2); font-weight: 640; padding: 9px 12px; background: var(--panel);
+  border-bottom: 1px solid var(--rule); white-space: nowrap; }}
 td {{ padding: 9px 12px; border-bottom: 1px solid var(--rule); font-size: 14px; }}
 tr:last-child td {{ border-bottom: 0; }}
-tbody tr:hover {{ background: oklch(96% 0.01 255); }}
-.num a {{ color: var(--accent); text-decoration: none; font-variant-numeric: tabular-nums; font-weight: 600; }}
+tbody tr {{ transition: background .12s ease; }}
+tbody tr:hover {{ background: color-mix(in oklab, var(--hover) 4%, transparent); }}
+.num a {{ color: var(--accent); text-decoration: none; font-variant-numeric: tabular-nums; font-weight: 640; }}
+.num a:hover {{ text-decoration: underline; }}
 .ttl {{ max-width: 440px; }}
 .ttl-t {{ display: inline-block; max-width: 440px; overflow: hidden; text-overflow: ellipsis;
-  white-space: nowrap; vertical-align: bottom; }}
+  white-space: nowrap; vertical-align: bottom; color: var(--ink0); }}
 .who {{ color: var(--ink1); white-space: nowrap; }}
 .mono {{ font-variant-numeric: tabular-nums; color: var(--ink1); text-align: right; white-space: nowrap; }}
-.tag {{ font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 600; white-space: nowrap; }}
-.tag--statement {{ background: oklch(52% 0.13 250 / .12); color: var(--stmt); }}
-.tag--infra {{ background: oklch(60% 0.02 260 / .12); color: var(--infra); }}
+.tag {{ font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 640; white-space: nowrap; }}
+.tag--statement {{ background: color-mix(in oklab, var(--stmt) 12%, transparent); color: var(--stmt); }}
+.tag--infra {{ background: color-mix(in oklab, var(--infra) 13%, transparent); color: var(--infra); }}
 .audit {{ max-width: 220px; }}
-.ab {{ display: inline-block; font-size: 11px; font-variant-numeric: tabular-nums; font-weight: 600;
+.ab {{ display: inline-block; font-size: 11px; font-variant-numeric: tabular-nums; font-weight: 650;
   text-decoration: none; padding: 1px 6px; margin: 1px 3px 1px 0; border-radius: 5px;
   border: 1px solid transparent; }}
-.ab--unconditional {{ background: oklch(58% 0.11 150 / .13); color: var(--moss); }}
-.ab--conditional {{ background: oklch(64% 0.11 75 / .16); color: var(--brass); }}
-.ab--unaudited, .ab--none {{ background: oklch(66% 0.015 260 / .12); color: var(--stone); }}
-.ab--signed {{ background: oklch(58% 0.11 150 / .13); color: var(--moss); border-color: var(--gold);
-  box-shadow: inset 0 0 0 1px oklch(74% 0.13 85 / .5); }}
-.ab--variant {{ background: oklch(64% 0.11 75 / .16); color: var(--brass); border-color: var(--gold); }}
-.ab--discrepancy {{ background: oklch(58% 0.19 25 / .14); color: var(--cinnabar); }}
-.roll {{ font-size: 12px; color: var(--ink1); line-height: 2; }}
+.ab:hover {{ filter: brightness(1.04) saturate(1.1); }}
+.ab--unconditional {{ background: color-mix(in oklab, var(--moss) 14%, transparent); color: var(--moss); }}
+.ab--conditional {{ background: color-mix(in oklab, var(--brass) 17%, transparent); color: var(--brass); }}
+.ab--unaudited, .ab--none {{ background: color-mix(in oklab, var(--stone) 14%, transparent); color: var(--stone); }}
+.ab--signed {{ background: color-mix(in oklab, var(--moss) 14%, transparent); color: var(--moss);
+  border-color: var(--gold); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--gold) 50%, transparent); }}
+.ab--variant {{ background: color-mix(in oklab, var(--brass) 17%, transparent); color: var(--brass);
+  border-color: var(--gold); }}
+.ab--discrepancy {{ background: color-mix(in oklab, var(--cinnabar) 16%, transparent); color: var(--cinnabar); }}
+.roll {{ font-size: 12px; color: var(--ink1); line-height: 1.9; }}
 .roll b {{ color: var(--ink0); font-variant-numeric: tabular-nums; }}
 .rc {{ display: inline-block; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
   padding: 0 5px; border-radius: 5px; }}
 .ci {{ display: inline-block; width: 9px; height: 9px; border-radius: 999px; }}
 .ci--ok {{ background: var(--ok); }} .ci--bad {{ background: var(--bad); }}
-.ci--run {{ background: var(--run); }} .ci--na {{ background: var(--rule); }}
-.appr {{ color: var(--moss); font-weight: 600; }}
+.ci--run {{ background: var(--run); }} .ci--na {{ background: var(--rule2); }}
+.appr {{ color: var(--moss); font-weight: 650; }}
 .appr-c {{ text-align: center; }}
-.flag {{ display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 6px; margin-left: 6px;
+.flag {{ display: inline-block; font-size: 10px; font-weight: 650; padding: 1px 6px; margin-left: 6px;
   border-radius: 5px; vertical-align: middle; text-transform: uppercase; letter-spacing: .03em; }}
-.flag--ci {{ background: oklch(75% 0.13 85 / .16); color: oklch(52% 0.11 75); }}
-.flag--conflict {{ background: oklch(60% 0.19 25 / .13); color: var(--cinnabar); }}
-.legend {{ display: flex; flex-wrap: wrap; gap: 14px; margin: 4px 0 0; font-size: 12px; color: var(--ink2); }}
-.legend span {{ display: inline-flex; align-items: center; gap: 5px; }}
-.sw {{ width: 10px; height: 10px; border-radius: 3px; display: inline-block; border: 1px solid transparent; }}
-.sw--moss {{ background: oklch(58% 0.11 150 / .5); }}
-.sw--brass {{ background: oklch(64% 0.11 75 / .6); }}
-.sw--stone {{ background: oklch(66% 0.015 260 / .4); }}
-.sw--gold {{ background: oklch(58% 0.11 150 / .3); border-color: var(--gold); }}
-footer {{ margin-top: 40px; color: var(--ink2); font-size: 12px; line-height: 1.7; }}
-footer a {{ color: var(--ink1); }}
-@media (max-width: 640px) {{ .cards {{ grid-template-columns: repeat(2, 1fr); }} }}
+.flag--ci {{ background: color-mix(in oklab, var(--run) 18%, transparent);
+  color: color-mix(in oklab, var(--run) 55%, var(--ink0)); }}
+.flag--conflict {{ background: color-mix(in oklab, var(--cinnabar) 15%, transparent); color: var(--cinnabar); }}
+
+footer {{ margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--rule);
+  color: var(--ink2); font-size: 12px; line-height: 1.75; }}
+footer p {{ margin: 0 0 8px; max-width: 82ch; }}
+footer a {{ color: var(--ink1); text-decoration: none; border-bottom: 1px solid var(--rule2); }}
+footer a:hover {{ color: var(--accent); border-color: var(--accent); }}
+@media (prefers-reduced-motion: reduce) {{ * {{ transition: none !important; }} }}
 </style></head>
 <body><div class="wrap">
 <header>
-  <h1>formal-conjectures &middot; review queue</h1>
-  <div class="sub">A review dashboard for open PRs, in the spirit of mathlib's queueboard. Generated {stamp}.</div>
+  <h1>formal-conjectures <span class="h1-sub">&middot; review queue</span></h1>
+  <p class="lede">Open pull requests, oldest waiting first. The audit column shows what the fidelity
+  check found for each linked proof; the merge decision stays the maintainer's.</p>
+  <div class="meta">Updated {stamp} &middot; refreshes hourly<span class="sep">|</span><a href="{fc_repo}/pulls">pull requests</a><span class="sep">|</span><a href="{fc_site}">formal-conjectures</a><span class="sep">|</span><a href="{board_repo}">source</a></div>
 </header>
-<div class="cards">
-  <div class="card"><div class="v">{total}</div><div class="k">open PRs</div></div>
-  <div class="card"><div class="v">{n_review}</div><div class="k">ready for review</div></div>
-  <div class="card"><div class="v">{n_stmt}</div><div class="k">of those, statements</div></div>
-  <div class="card"><div class="v">{oldest}d</div><div class="k">longest waiting</div></div>
-</div>
+{strip}
+{key}
 {sections}
-<div class="legend">
-  <span><span class="sw sw--moss"></span> unconditional</span>
-  <span><span class="sw sw--brass"></span> conditional</span>
-  <span><span class="sw sw--stone"></span> not yet audited</span>
-  <span><span class="sw sw--gold"></span> signed by a named reviewer</span>
-</div>
 <footer>
-  The <strong>audit</strong> column joins each Erdos-problem PR to the public fidelity audit: whether the
-  linked proof is unconditional, rests on a named assumption (conditional), or carries a signed reviewer
-  verdict. It reports a fact; the merge decision is the maintainer's.<br>
-  Ready for review = not draft, no changes requested, no merge conflict, CI not failing. The waiting groups
-  sort by idle time; ready-for-review by how long each has been open. &check; counts approvals, &pm; is lines changed.<br>
-  PR data via the GitHub API; problem-audit data via the
-  <a href="https://erdos.constellate.science">Erdos frontier</a> snapshot. Not affiliated with the
-  formal-conjectures maintainers.
+  <p><strong>The audit column</strong> joins each Erd&#337;s-problem PR to the public fidelity audit &mdash;
+  whether the linked proof is machine-checked unconditional, rests on a named assumption, or carries a
+  signed reviewer verdict. It reports a fact next to the PR; the merge decision is the maintainer's.
+  <a href="{method}">How the audit works &rarr;</a></p>
+  <p><strong>Ready for review</strong> = not draft, no changes requested, no merge conflict, CI not failing.
+  The waiting groups sort by idle time; ready-for-review by how long each has been open. &check; counts
+  approvals, &pm; is lines changed. &ldquo;CI pending&rdquo; marks PRs whose build has not run yet.</p>
+  <p>PR data via the GitHub API. Problem-audit data via the <a href="{frontier}">Erd&#337;s frontier</a>
+  snapshot. In the spirit of mathlib's queueboard. An independent tool, not affiliated with the
+  formal-conjectures maintainers.</p>
 </footer>
 </div></body></html>
 """
