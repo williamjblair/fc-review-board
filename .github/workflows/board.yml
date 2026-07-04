@@ -28,33 +28,20 @@ jobs:
         with:
           python-version: "3.12"
 
-      # The GitHub API is occasionally flaky under a heavy PR+files query, so
-      # retry a few times before giving up.
-      - name: Fetch open PRs
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          ok=0
-          for i in 1 2 3 4 5 6; do
-            if gh pr list -R google-deepmind/formal-conjectures --state open --limit 200 \
-                 --json number,title,author,labels,isDraft,createdAt,updatedAt,statusCheckRollup,reviewDecision,mergeStateStatus,latestReviews,additions,deletions,files \
-                 > prs.json 2>fetch_err.txt \
-               && python3 -c "import json,sys; sys.exit(0 if json.load(open('prs.json')) else 1)"; then
-              ok=1; break
-            fi
-            echo "attempt $i failed: $(tail -c 160 fetch_err.txt)"; sleep 20
-          done
-          # Fail the run rather than deploy a broken board; the last good
-          # deploy stays and the hourly cron retries once GitHub recovers.
-          [ "$ok" = 1 ] || { echo "::error::could not fetch PRs after 6 attempts (GitHub GraphQL likely degraded)"; exit 1; }
-
       - name: Fetch audit feed
         env:
           VERDICTS_URL: ${{ vars.VERDICTS_URL }}
         run: |
           curl -sfL "${VERDICTS_URL:-https://erdos.constellate.science/verdicts.json}" -o verdicts.json
 
+      # generate.py fetches the open PRs itself, paginating the GitHub GraphQL
+      # API in small pages (a single 200-PR query with file lists 502s). It
+      # exits non-zero if the fetch fails, so the run fails rather than
+      # deploying a broken board; the last good deploy stays and the hourly
+      # cron retries.
       - name: Generate board
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           python3 generate.py
           mkdir -p _site

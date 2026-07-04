@@ -30,6 +30,7 @@ import json
 import os
 import re
 import subprocess
+import time
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -47,18 +48,99 @@ FINDING_URL = "https://erdos.constellate.science/finding.html?n={n}"
 ERDOS_URL = "https://www.erdosproblems.com/{n}"
 ERDOS_FILE_RE = re.compile(r"ErdosProblems/(\d+)\.lean")
 
-PR_FIELDS = ("number,title,author,labels,isDraft,createdAt,updatedAt,"
-             "statusCheckRollup,reviewDecision,mergeStateStatus,latestReviews,"
-             "additions,deletions,files")
-
-
 # --- data -----------------------------------------------------------------
+# A single `gh pr list --json ...files...` over ~200 PRs asks GitHub for tens
+# of thousands of nodes in one query and reliably 502s. Paginate instead: small
+# pages via `gh api graphql`, transformed into the flat shape the renderer uses.
+
+_OWNER, _NAME = REPO.split("/")
+GRAPHQL_QUERY = """
+query($cursor: String) {
+  repository(owner: "%s", name: "%s") {
+    pullRequests(states: OPEN, first: 25, after: $cursor) {
+      pageInfo { hasNextPage endCursor }
+      nodes {
+        number title isDraft createdAt updatedAt reviewDecision
+        mergeStateStatus additions deletions
+        author { login }
+        labels(first: 20) { nodes { name } }
+        latestOpinionatedReviews(first: 30) { nodes { state } }
+        files(first: 100) { nodes { path } }
+        commits(last: 1) { nodes { commit { statusCheckRollup {
+          contexts(first: 100) { nodes {
+            __typename
+            ... on CheckRun { name conclusion }
+            ... on StatusContext { context state }
+          } }
+        } } } }
+      }
+    }
+  }
+}
+""" % (_OWNER, _NAME)
+
+
+def _gql_page(cursor: str | None) -> dict:
+    cmd = ["gh", "api", "graphql", "-f", f"query={GRAPHQL_QUERY}"]
+    if cursor is not None:
+        cmd += ["-F", f"cursor={cursor}"]
+    out = subprocess.run(cmd, capture_output=True, text=True)
+    if out.returncode != 0:
+        raise RuntimeError(out.stderr.strip()[:200] or "gh api graphql failed")
+    return json.loads(out.stdout)
+
+
+def _status_rollup(node: dict) -> list[dict]:
+    commits = (node.get("commits") or {}).get("nodes") or []
+    if not commits:
+        return []
+    scr = (commits[0].get("commit") or {}).get("statusCheckRollup")
+    if not scr:
+        return []
+    out = []
+    for c in (scr.get("contexts") or {}).get("nodes") or []:
+        if c.get("__typename") == "CheckRun":
+            out.append({"name": c.get("name"), "conclusion": c.get("conclusion")})
+        elif c.get("__typename") == "StatusContext":
+            out.append({"name": c.get("context"), "conclusion": c.get("state")})
+    return out
+
+
+def _transform(n: dict) -> dict:
+    return {
+        "number": n["number"], "title": n["title"], "isDraft": n["isDraft"],
+        "createdAt": n["createdAt"], "updatedAt": n["updatedAt"],
+        "reviewDecision": n.get("reviewDecision"),
+        "mergeStateStatus": n.get("mergeStateStatus"),
+        "additions": n.get("additions", 0), "deletions": n.get("deletions", 0),
+        "author": {"login": (n.get("author") or {}).get("login")},
+        "labels": [{"name": l["name"]} for l in (n.get("labels") or {}).get("nodes", [])],
+        "latestReviews": [{"state": r["state"]}
+                          for r in (n.get("latestOpinionatedReviews") or {}).get("nodes", [])],
+        "files": [{"path": f["path"]} for f in (n.get("files") or {}).get("nodes", [])],
+        "statusCheckRollup": _status_rollup(n),
+    }
+
 
 def pull_prs() -> list[dict]:
-    out = subprocess.run(
-        ["gh", "pr", "list", "-R", REPO, "--state", "open", "--limit", "200",
-         "--json", PR_FIELDS], capture_output=True, text=True, check=True)
-    return json.loads(out.stdout)
+    nodes: list[dict] = []
+    cursor: str | None = None
+    while True:
+        for attempt in range(5):
+            try:
+                data = _gql_page(cursor)
+                break
+            except RuntimeError as e:
+                if attempt == 4:
+                    raise SystemExit(f"could not fetch PRs from GitHub: {e}")
+                time.sleep(8)
+        conn = data["data"]["repository"]["pullRequests"]
+        nodes.extend(conn["nodes"])
+        if conn["pageInfo"]["hasNextPage"]:
+            cursor = conn["pageInfo"]["endCursor"]
+        else:
+            break
+    return [_transform(n) for n in nodes]
 
 
 def load_prs() -> list[dict]:
