@@ -1,0 +1,68 @@
+name: Build review board
+
+on:
+  schedule:
+    - cron: "0 * * * *"   # hourly
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+# Least privilege for the official GitHub Pages deployment.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never cancel an in-flight deploy; let each run finish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # The GitHub API is occasionally flaky under a heavy PR+files query, so
+      # retry a few times before giving up.
+      - name: Fetch open PRs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for i in 1 2 3 4 5; do
+            gh pr list -R google-deepmind/formal-conjectures --state open --limit 200 \
+              --json number,title,author,labels,isDraft,createdAt,updatedAt,statusCheckRollup,reviewDecision,mergeStateStatus,latestReviews,additions,deletions,files \
+              > prs.json && python3 -c "import json,sys; sys.exit(0 if json.load(open('prs.json')) else 1)" && break
+            echo "attempt $i failed, retrying..."; sleep 15
+          done
+
+      - name: Fetch audit feed
+        env:
+          VERDICTS_URL: ${{ vars.VERDICTS_URL }}
+        run: |
+          curl -sfL "${VERDICTS_URL:-https://erdos.constellate.science/verdicts.json}" -o verdicts.json
+
+      - name: Generate board
+        run: |
+          python3 generate.py
+          mkdir -p _site
+          cp index.html _site/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,7 @@
+# Fetched/generated at build time by the workflow. Not source.
+prs.json
+verdicts.json
+index.html
+_site/
+err.txt
+__pycache__/
