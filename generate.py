@@ -462,25 +462,34 @@ TEMPLATE = """<!doctype html>
 <title>formal-conjectures &middot; review queue</title>
 <style>
 :root {{
-  --paper: oklch(98.4% 0.004 265); --panel: oklch(96.4% 0.006 265); --card: oklch(99.4% 0.002 265);
-  --ink0: oklch(27% 0.02 265); --ink1: oklch(44% 0.018 265); --ink2: oklch(57% 0.015 265);
-  --rule: oklch(91% 0.008 265); --rule2: oklch(85% 0.012 265); --hover: oklch(27% 0.02 265);
-  --accent: oklch(52% 0.13 255);
-  --ok: oklch(60% 0.13 150); --bad: oklch(57% 0.2 25); --run: oklch(70% 0.14 78);
-  --stmt: oklch(52% 0.13 255); --infra: oklch(55% 0.015 265);
-  --moss: oklch(55% 0.11 150); --brass: oklch(56% 0.11 70); --gold: oklch(68% 0.13 85);
-  --stone: oklch(60% 0.015 265); --cinnabar: oklch(55% 0.19 25);
+  /* Constellate / Vela canonical tokens (colors only, no branding) — matched to
+     erdos-frontier so the trust vocabulary renders identically across both. */
+  --paper: oklch(97.2% 0.008 248); --panel: oklch(93.4% 0.011 250); --card: oklch(99.2% 0.004 248);
+  --ink0: oklch(20% 0.030 262); --ink1: oklch(38% 0.026 258); --ink2: oklch(54% 0.018 252);
+  --rule: color-mix(in oklab, var(--ink0) 12%, transparent);
+  --rule2: color-mix(in oklab, var(--ink0) 22%, transparent); --hover: var(--ink0);
+  --accent: oklch(40% 0.072 252);
+  --ok: oklch(52% 0.075 145); --bad: oklch(52% 0.12 34); --run: oklch(66% 0.10 80);
+  --stmt: oklch(40% 0.060 250); --infra: oklch(54% 0.018 252);
+  --moss: oklch(43.5% 0.043 128); --brass: oklch(45.5% 0.082 83);
+  --gold: oklch(72% 0.130 86); --gold-ink: oklch(46.8% 0.102 82);
+  --gold-glow: color-mix(in oklab, var(--gold) 20%, transparent);
+  --stone: oklch(55% 0.022 80); --cinnabar: oklch(49.5% 0.128 35);
 }}
 @media (prefers-color-scheme: dark) {{
   :root {{
-    --paper: oklch(18.5% 0.02 265); --panel: oklch(23% 0.02 265); --card: oklch(21.5% 0.018 265);
-    --ink0: oklch(92% 0.01 265); --ink1: oklch(75% 0.014 265); --ink2: oklch(60% 0.014 265);
-    --rule: oklch(30% 0.015 265); --rule2: oklch(38% 0.018 265); --hover: oklch(92% 0.01 265);
-    --accent: oklch(75% 0.12 255);
-    --ok: oklch(72% 0.13 150); --bad: oklch(68% 0.19 25); --run: oklch(80% 0.13 78);
-    --stmt: oklch(75% 0.12 255); --infra: oklch(66% 0.015 265);
-    --moss: oklch(74% 0.12 150); --brass: oklch(77% 0.11 74); --gold: oklch(82% 0.12 85);
-    --stone: oklch(68% 0.02 265); --cinnabar: oklch(71% 0.18 25);
+    /* Observatory night — deep prussian indigo; gold stays the one warm light. */
+    --paper: oklch(17.4% 0.024 252); --panel: oklch(22% 0.026 254); --card: oklch(20.6% 0.024 253);
+    --ink0: oklch(92% 0.012 258); --ink1: oklch(74% 0.016 256); --ink2: oklch(60% 0.016 256);
+    --rule: color-mix(in oklab, var(--ink0) 16%, transparent);
+    --rule2: color-mix(in oklab, var(--ink0) 28%, transparent); --hover: var(--ink0);
+    --accent: oklch(74% 0.058 250);
+    --ok: oklch(66% 0.085 145); --bad: oklch(64% 0.13 35); --run: oklch(76% 0.10 80);
+    --stmt: oklch(74% 0.060 250); --infra: oklch(62% 0.016 256);
+    --moss: oklch(60% 0.055 128); --brass: oklch(62% 0.095 83);
+    --gold: oklch(77% 0.120 85); --gold-ink: oklch(80% 0.100 84);
+    --gold-glow: color-mix(in oklab, var(--gold) 16%, transparent);
+    --stone: oklch(64% 0.020 258); --cinnabar: oklch(64% 0.130 35);
   }}
 }}
 * {{ box-sizing: border-box; }}
@@ -511,7 +520,7 @@ h1 .h1-sub {{ color: var(--ink2); font-weight: 460; }}
 .sv {{ font-size: 19px; font-weight: 660; font-variant-numeric: tabular-nums;
   letter-spacing: -.01em; color: var(--ink0); }}
 .sl {{ font-size: 12.5px; color: var(--ink2); }}
-.sv--gold {{ color: color-mix(in oklab, var(--gold) 72%, var(--ink1)); }}
+.sv--gold {{ color: var(--gold-ink); }}
 .sv--brass {{ color: var(--brass); }}
 .sv--cinnabar {{ color: var(--cinnabar); }}
 
@@ -524,7 +533,7 @@ h1 .h1-sub {{ color: var(--ink2); font-weight: 460; }}
 .kd--moss {{ background: color-mix(in oklab, var(--moss) 52%, transparent); }}
 .kd--brass {{ background: color-mix(in oklab, var(--brass) 58%, transparent); }}
 .kd--stone {{ background: color-mix(in oklab, var(--stone) 40%, transparent); }}
-.kd--gold {{ background: color-mix(in oklab, var(--moss) 30%, transparent); border-color: var(--gold); }}
+.kd--gold {{ background: var(--gold-glow); border-color: color-mix(in oklab, var(--gold) 55%, transparent); }}
 .kd--cinnabar {{ background: color-mix(in oklab, var(--cinnabar) 42%, transparent); }}
 
 section {{ margin: 26px 0; }}
@@ -541,7 +550,7 @@ tr:last-child td {{ border-bottom: 0; }}
 tbody tr {{ transition: background .12s ease; }}
 tbody tr:hover {{ background: color-mix(in oklab, var(--hover) 4%, transparent); }}
 .num a {{ color: var(--accent); text-decoration: none; font-variant-numeric: tabular-nums; font-weight: 640; }}
-.num a:hover {{ text-decoration: underline; }}
+.num a:hover {{ color: var(--gold-ink); text-decoration: underline; }}
 .ttl {{ max-width: 440px; }}
 .ttl-t {{ display: inline-block; max-width: 440px; overflow: hidden; text-overflow: ellipsis;
   white-space: nowrap; vertical-align: bottom; color: var(--ink0); }}
@@ -555,14 +564,17 @@ tbody tr:hover {{ background: color-mix(in oklab, var(--hover) 4%, transparent);
   text-decoration: none; padding: 1px 6px; margin: 1px 3px 1px 0; border-radius: 5px;
   border: 1px solid transparent; }}
 .ab:hover {{ filter: brightness(1.04) saturate(1.1); }}
-.ab--unconditional {{ background: color-mix(in oklab, var(--moss) 14%, transparent); color: var(--moss); }}
-.ab--conditional {{ background: color-mix(in oklab, var(--brass) 17%, transparent); color: var(--brass); }}
-.ab--unaudited, .ab--none {{ background: color-mix(in oklab, var(--stone) 14%, transparent); color: var(--stone); }}
-.ab--signed {{ background: color-mix(in oklab, var(--moss) 14%, transparent); color: var(--moss);
-  border-color: var(--gold); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--gold) 50%, transparent); }}
-.ab--variant {{ background: color-mix(in oklab, var(--brass) 17%, transparent); color: var(--brass);
-  border-color: var(--gold); }}
-.ab--discrepancy {{ background: color-mix(in oklab, var(--cinnabar) 16%, transparent); color: var(--cinnabar); }}
+.ab--unconditional {{ color: var(--moss); background: color-mix(in oklab, var(--moss) 13%, transparent);
+  border-color: color-mix(in oklab, var(--moss) 38%, transparent); }}
+.ab--conditional {{ color: var(--brass); background: color-mix(in oklab, var(--brass) 14%, transparent);
+  border-color: color-mix(in oklab, var(--brass) 40%, transparent); }}
+.ab--unaudited, .ab--none {{ color: var(--stone); background: none; border-color: var(--rule2); }}
+.ab--signed {{ color: var(--gold-ink); background: var(--gold-glow);
+  border-color: color-mix(in oklab, var(--gold) 55%, transparent); }}
+.ab--variant {{ color: var(--brass); background: color-mix(in oklab, var(--brass) 14%, transparent);
+  border-color: color-mix(in oklab, var(--gold) 55%, transparent); }}
+.ab--discrepancy {{ color: var(--cinnabar); background: color-mix(in oklab, var(--cinnabar) 12%, transparent);
+  border-color: color-mix(in oklab, var(--cinnabar) 42%, transparent); }}
 .roll {{ font-size: 12px; color: var(--ink1); line-height: 1.9; }}
 .roll b {{ color: var(--ink0); font-variant-numeric: tabular-nums; }}
 .rc {{ display: inline-block; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
