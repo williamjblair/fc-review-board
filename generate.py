@@ -391,54 +391,57 @@ h1 .h1-sub { color: var(--ink2); font-weight: 460; }
 .meta a:hover { color: var(--accent); border-color: var(--accent); }
 .sep { margin: 0 8px; color: var(--rule2); }
 
-.strip { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px 26px;
-  padding: 15px 18px; margin: 0 0 12px; background: var(--panel);
-  border: 1px solid var(--rule); border-radius: 12px; }
-.grp { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: baseline; }
-.grp--audit { position: relative; padding-left: 26px; }
+/* Overview: a slim typographic row, not a filled card. */
+.strip { display: flex; flex-wrap: wrap; align-items: baseline; gap: 9px 22px;
+  padding: 2px 0 18px; margin: 4px 0 0; }
+.grp { display: flex; flex-wrap: wrap; gap: 9px 20px; align-items: baseline; }
+.grp--audit { position: relative; padding-left: 24px; }
 .grp--audit::before { content: ""; position: absolute; left: 0; top: 3px; bottom: 3px;
   width: 1px; background: var(--rule2); }
 .stat { display: flex; align-items: baseline; gap: 6px; }
-.sv { font-size: 19px; font-weight: 660; font-variant-numeric: tabular-nums;
+.sv { font-size: 18px; font-weight: 660; font-variant-numeric: tabular-nums;
   letter-spacing: -.01em; color: var(--ink0); }
 .sl { font-size: 12.5px; color: var(--ink2); }
 .sv--gold { color: var(--gold-ink); } .sv--brass { color: var(--brass); } .sv--cinnabar { color: var(--cinnabar); }
 
-.key { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 15px;
-  margin: 0 2px 16px; font-size: 12px; color: var(--ink2); }
-.key-t { font-weight: 640; color: var(--ink1); text-transform: uppercase;
-  letter-spacing: .06em; font-size: 10.5px; }
-.key .item { display: inline-flex; align-items: center; gap: 6px; }
-.kd { width: 11px; height: 11px; border-radius: 4px; display: inline-block; border: 1px solid transparent; }
-.kd--moss { background: color-mix(in oklab, var(--moss) 52%, transparent); }
-.kd--brass { background: color-mix(in oklab, var(--brass) 58%, transparent); }
-.kd--stone { background: color-mix(in oklab, var(--stone) 40%, transparent); }
-.kd--gold { background: var(--gold-glow); border-color: color-mix(in oklab, var(--gold) 55%, transparent); }
-.kd--cinnabar { background: color-mix(in oklab, var(--cinnabar) 42%, transparent); }
-
-.toolbar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center;
-  padding: 12px 0; margin-bottom: 6px; border-top: 1px solid var(--rule); }
-.search input { font: inherit; font-size: 13px; padding: 6px 11px; width: 210px; max-width: 60vw;
+/* One sticky control bar: search + views on top, filters below. */
+.controls { position: sticky; top: 0; z-index: 5; background: var(--paper);
+  padding: 11px 0; margin-bottom: 10px; border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule); }
+.controls-row { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
+.controls-row + .controls-row { margin-top: 11px; }
+.spacer { margin-left: auto; }
+.search { position: relative; display: flex; align-items: center; }
+.search .s-icon { position: absolute; left: 10px; width: 14px; height: 14px;
+  fill: var(--ink2); pointer-events: none; }
+.search input { font: inherit; font-size: 13px; padding: 6px 11px 6px 30px; width: 230px; max-width: 62vw;
   background: var(--card); color: var(--ink0); border: 1px solid var(--rule2); border-radius: 8px; }
 .search input::placeholder { color: var(--ink2); }
-.facets { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
-.facet { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.facet-l { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em;
-  color: var(--ink2); font-weight: 640; }
-.chip { font: inherit; font-size: 12px; padding: 3px 9px; border-radius: 999px;
-  border: 1px solid var(--rule2); background: none; color: var(--ink1); cursor: pointer; transition: all .12s ease; }
-.chip:hover { border-color: var(--ink2); }
-.chip.on { background: color-mix(in oklab, var(--accent) 13%, transparent);
-  border-color: color-mix(in oklab, var(--accent) 45%, transparent); color: var(--accent); font-weight: 640; }
-.spacer { margin-left: auto; }
+.filters { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 8px; }
+.fdiv { width: 1px; align-self: stretch; min-height: 18px; background: var(--rule2); margin: 0 5px; }
+.chip { display: inline-flex; align-items: center; font: inherit; font-size: 12px;
+  padding: 3px 10px; border-radius: 999px; border: 1px solid var(--rule2);
+  background: none; color: var(--ink1); cursor: pointer; transition: all .12s ease; }
+.chip:hover { border-color: var(--ink2); color: var(--ink0); }
+.chip.on { background: color-mix(in oklab, var(--accent) 12%, transparent);
+  border-color: color-mix(in oklab, var(--accent) 42%, transparent); color: var(--accent); font-weight: 640; }
+.cdot { width: 8px; height: 8px; border-radius: 3px; display: inline-block;
+  margin-right: 6px; border: 1px solid transparent; }
+.cdot--moss { background: color-mix(in oklab, var(--moss) 55%, transparent); }
+.cdot--brass { background: color-mix(in oklab, var(--brass) 60%, transparent); }
+.cdot--stone { background: color-mix(in oklab, var(--stone) 42%, transparent); }
+.cdot--gold { background: var(--gold-glow); border-color: color-mix(in oklab, var(--gold) 55%, transparent); }
+.cdot--cinnabar { background: color-mix(in oklab, var(--cinnabar) 45%, transparent); }
 .tabs { display: flex; gap: 3px; background: var(--panel); border: 1px solid var(--rule);
   border-radius: 9px; padding: 3px; }
-.tab { font: inherit; font-size: 13px; padding: 4px 12px; border-radius: 7px; border: 0;
+.tab { font: inherit; font-size: 13px; padding: 4px 13px; border-radius: 7px; border: 0;
   background: none; color: var(--ink1); cursor: pointer; transition: all .12s ease; }
 .tab:hover { color: var(--ink0); }
 .tab.active { background: var(--card); color: var(--ink0); font-weight: 640;
   box-shadow: 0 1px 2px color-mix(in oklab, var(--ink0) 12%, transparent); }
-.count { font-size: 12.5px; color: var(--ink2); font-variant-numeric: tabular-nums; }
+.count { font-size: 12.5px; color: var(--ink2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.caret { vertical-align: middle; margin-left: 3px; }
+.caret.up { transform: rotate(180deg); }
 
 section { margin: 22px 0; }
 .sec-h { display: flex; align-items: baseline; gap: 8px; margin: 0 0 9px; }
@@ -517,20 +520,17 @@ footer a:hover { color: var(--accent); border-color: var(--accent); }
   <div class="meta">Updated __STAMP__ &middot; refreshes hourly<span class="sep">|</span><a href="__FC_REPO__/pulls">pull requests</a><span class="sep">|</span><a href="__FC_SITE__">formal-conjectures</a><span class="sep">|</span><a href="__BOARD_REPO__">source</a></div>
 </header>
 <div id="strip" class="strip"></div>
-<div class="key">
-  <span class="key-t">audit</span>
-  <span class="item"><span class="kd kd--moss"></span>unconditional</span>
-  <span class="item"><span class="kd kd--brass"></span>conditional</span>
-  <span class="item"><span class="kd kd--stone"></span>not yet audited</span>
-  <span class="item"><span class="kd kd--gold"></span>signed by a reviewer</span>
-  <span class="item"><span class="kd kd--cinnabar"></span>flagged unfaithful</span>
-</div>
-<div class="toolbar">
-  <div class="search"><input id="search" type="search" placeholder="Search #, title, author" aria-label="Search pull requests"></div>
-  <div class="facets" id="facets"></div>
-  <div class="spacer"></div>
-  <div class="tabs" id="tabs" role="tablist"></div>
-  <span class="count" id="count"></span>
+<div class="controls">
+  <div class="controls-row">
+    <div class="search">
+      <svg class="s-icon" viewBox="0 0 256 256" aria-hidden="true"><path d="M229.66 218.34l-50.07-50.06a88.11 88.11 0 1 0-11.31 11.31l50.06 50.07a8 8 0 0 0 11.32-11.32ZM40 112a72 72 0 1 1 72 72 72.08 72.08 0 0 1-72-72Z"/></svg>
+      <input id="search" type="search" placeholder="Search #, title, author" aria-label="Search pull requests">
+    </div>
+    <div class="spacer"></div>
+    <div class="tabs" id="tabs" role="tablist"></div>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="controls-row"><div class="filters" id="facets"></div></div>
 </div>
 <div id="app" aria-live="polite"></div>
 <noscript><p class="empty">This board needs JavaScript to filter and render.
@@ -555,6 +555,8 @@ const META = __META__;
 const AUDIT_LABEL = {signed:'signed', unconditional:'unconditional', conditional:'conditional', flagged:'flagged', unaudited:'unaudited'};
 const AUDIT_ORDER = ['flagged','conditional','signed','unconditional','unaudited'];
 const CLS_OF = {signed:'ab--signed', unconditional:'ab--unconditional', conditional:'ab--conditional', flagged:'ab--discrepancy', unaudited:'ab--unaudited'};
+const AUDIT_DOT = {signed:'gold', unconditional:'moss', conditional:'brass', flagged:'cinnabar', unaudited:'stone'};
+const CARET = '<svg width="9" height="9" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const FID_TITLE = {flagged:'Flagged unfaithful', conditional:'Conditional — rests on an assumption', signed:'Signed faithful', unconditional:'Machine-checked unconditional', unaudited:'Not yet audited'};
 const BUCKETS = [['approved','Approved, ready to merge'],['review','Ready for review'],['author','Waiting on the author'],['draft','Draft / work in progress']];
 const COLS = [['n','PR'],['title','title'],['author','author'],['kind','kind'],['audit','audit'],['age','open'],['idle','idle'],['ci','CI'],['appr','&check;'],['churn','&pm;']];
@@ -585,7 +587,7 @@ function matches(r){
 function badge(a){ return '<a class="ab '+a.cls+'" href="'+a.href+'" title="#'+a.n+': '+esc(a.note)+'">'+a.n+'</a>'; }
 function auditCell(r){
   if (!r.audit.length) return '<td class="audit"></td>';
-  if (r.audit.length <= 8) return '<td class="audit">'+r.audit.map(badge).join('')+'</td>';
+  if (r.audit.length <= 4) return '<td class="audit">'+r.audit.map(badge).join('')+'</td>';
   const counts = {}; r.audit.forEach(a => counts[a.status] = (counts[a.status]||0)+1);
   const parts = AUDIT_ORDER.filter(s => counts[s]).map(s => '<span class="rc '+CLS_OF[s]+'">'+counts[s]+'</span>&thinsp;'+AUDIT_LABEL[s]);
   return '<td class="audit"><span class="roll"><b>'+r.audit.length+'</b> problems &middot; '+parts.join(' &middot; ')+'</span></td>';
@@ -622,7 +624,7 @@ function sortRecs(recs){ const {col, dir} = state.sort, m = dir === 'asc' ? 1 : 
 function tableHtml(recs, sortable){
   const head = COLS.map(([k, l]) => {
     const s = sortable && SORTABLE[k], cur = state.sort.col === k;
-    const arrow = cur ? (state.sort.dir === 'asc' ? ' &uarr;' : ' &darr;') : '';
+    const arrow = cur ? '<span class="caret'+(state.sort.dir === 'asc' ? ' up' : '')+'">'+CARET+'</span>' : '';
     return s ? '<th class="sortable'+(cur?' active':'')+'" data-col="'+k+'" title="Sort by '+k+'">'+l+arrow+'</th>' : '<th>'+l+'</th>';
   }).join('');
   return '<div class="scroll"><table><thead><tr>'+head+'</tr></thead><tbody>'+recs.map(rowHtml).join('')+'</tbody></table></div>';
@@ -689,9 +691,14 @@ function buildToolbar(){
   tabsEl.innerHTML = [['queue','Queue'],['all','All PRs'],['fidelity','Fidelity']]
     .map(([k, l]) => '<button class="tab" role="tab" data-view="'+k+'">'+l+'</button>').join('');
   tabsEl.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => { state.view = b.dataset.view; syncUrl(); updateTabs(); render(); }));
-  facetsEl.innerHTML = FACETS.filter(f => f.group !== 'audit' || META.hasAudit).map(f =>
-    '<div class="facet"><span class="facet-l">'+f.label+'</span>'
-    + f.opts.map(o => '<button class="chip" data-group="'+f.group+'" data-val="'+o+'">'+o+'</button>').join('')+'</div>').join('');
+  const groups = FACETS.filter(f => f.group !== 'audit' || META.hasAudit);
+  facetsEl.innerHTML = groups.map((f, i) =>
+    (i ? '<span class="fdiv"></span>' : '')
+    + f.opts.map(o => {
+        const dot = f.group === 'audit' ? '<span class="cdot cdot--'+AUDIT_DOT[o]+'"></span>' : '';
+        return '<button class="chip" data-group="'+f.group+'" data-val="'+o+'" title="Filter: '+o+'">'+dot+o+'</button>';
+      }).join('')
+  ).join('');
   facetsEl.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
     const set = state.facets[c.dataset.group]; const v = c.dataset.val;
     set.has(v) ? set.delete(v) : set.add(v); syncUrl(); updateChips(); render();
