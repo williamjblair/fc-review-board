@@ -417,16 +417,28 @@ h1 .h1-sub { color: var(--ink2); font-weight: 460; }
 .search input { font: inherit; font-size: 13px; padding: 6px 11px 6px 30px; width: 230px; max-width: 62vw;
   background: var(--card); color: var(--ink0); border: 1px solid var(--rule2); border-radius: 8px; }
 .search input::placeholder { color: var(--ink2); }
-.filters { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 8px; }
-.fdiv { width: 1px; align-self: stretch; min-height: 18px; background: var(--rule2); margin: 0 5px; }
-.chip { display: inline-flex; align-items: center; font: inherit; font-size: 12px;
-  padding: 3px 10px; border-radius: 999px; border: 1px solid var(--rule2);
-  background: none; color: var(--ink1); cursor: pointer; transition: all .12s ease; }
-.chip:hover { border-color: var(--ink2); color: var(--ink0); }
-.chip.on { background: color-mix(in oklab, var(--accent) 12%, transparent);
-  border-color: color-mix(in oklab, var(--accent) 42%, transparent); color: var(--accent); font-weight: 640; }
-.cdot { width: 8px; height: 8px; border-radius: 3px; display: inline-block;
-  margin-right: 6px; border: 1px solid transparent; }
+.filterbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fdd { position: relative; }
+.fbtn { display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: 13px;
+  padding: 5px 11px; border-radius: 8px; border: 1px solid var(--rule2); background: var(--card);
+  color: var(--ink1); cursor: pointer; transition: all .12s ease; }
+.fbtn:hover { border-color: var(--ink2); color: var(--ink0); }
+.fbtn.active { color: var(--accent); border-color: color-mix(in oklab, var(--accent) 42%, transparent);
+  background: color-mix(in oklab, var(--accent) 10%, transparent); }
+.fbtn-n { font-variant-numeric: tabular-nums; font-weight: 660; }
+.fbtn svg { opacity: .55; transition: transform .12s ease; }
+.fdd.open .fbtn svg { transform: rotate(180deg); }
+.fmenu { position: absolute; top: calc(100% + 5px); left: 0; z-index: 20; min-width: 172px;
+  background: var(--card); border: 1px solid var(--rule2); border-radius: 10px; padding: 5px;
+  box-shadow: 0 8px 24px color-mix(in oklab, var(--ink0) 18%, transparent); }
+.fopt { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px;
+  font-size: 13px; color: var(--ink1); cursor: pointer; text-transform: capitalize; }
+.fopt:hover { background: color-mix(in oklab, var(--hover) 6%, transparent); }
+.fopt input { accent-color: var(--accent); margin: 0; cursor: pointer; }
+.clear-btn { font: inherit; font-size: 12.5px; color: var(--ink2); background: none; border: 0;
+  cursor: pointer; padding: 5px 4px; }
+.clear-btn:hover { color: var(--accent); text-decoration: underline; }
+.cdot { width: 8px; height: 8px; border-radius: 3px; display: inline-block; border: 1px solid transparent; }
 .cdot--moss { background: color-mix(in oklab, var(--moss) 55%, transparent); }
 .cdot--brass { background: color-mix(in oklab, var(--brass) 60%, transparent); }
 .cdot--stone { background: color-mix(in oklab, var(--stone) 42%, transparent); }
@@ -485,8 +497,8 @@ tbody tr:hover { background: color-mix(in oklab, var(--hover) 4%, transparent); 
   border-color: color-mix(in oklab, var(--gold) 55%, transparent); }
 .ab--discrepancy { color: var(--cinnabar); background: color-mix(in oklab, var(--cinnabar) 12%, transparent);
   border-color: color-mix(in oklab, var(--cinnabar) 42%, transparent); }
-.roll { font-size: 12px; color: var(--ink1); line-height: 1.9; }
-.roll b { color: var(--ink0); font-variant-numeric: tabular-nums; }
+.roll { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; font-size: 12px; color: var(--ink2); }
+.roll b { color: var(--ink0); font-variant-numeric: tabular-nums; margin-right: 3px; }
 .rc { display: inline-block; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
   padding: 0 5px; border-radius: 5px; border: 1px solid transparent; }
 .ci { display: inline-block; width: 9px; height: 9px; border-radius: 999px; }
@@ -526,11 +538,11 @@ footer a:hover { color: var(--accent); border-color: var(--accent); }
       <svg class="s-icon" viewBox="0 0 256 256" aria-hidden="true"><path d="M229.66 218.34l-50.07-50.06a88.11 88.11 0 1 0-11.31 11.31l50.06 50.07a8 8 0 0 0 11.32-11.32ZM40 112a72 72 0 1 1 72 72 72.08 72.08 0 0 1-72-72Z"/></svg>
       <input id="search" type="search" placeholder="Search #, title, author" aria-label="Search pull requests">
     </div>
+    <div class="filterbar" id="filterbar"></div>
     <div class="spacer"></div>
     <div class="tabs" id="tabs" role="tablist"></div>
     <span class="count" id="count"></span>
   </div>
-  <div class="controls-row"><div class="filters" id="facets"></div></div>
 </div>
 <div id="app" aria-live="polite"></div>
 <noscript><p class="empty">This board needs JavaScript to filter and render.
@@ -570,7 +582,7 @@ const FACETS = [
 const state = {view:'queue', q:'', facets:{audit:new Set(), kind:new Set(), ci:new Set()}, sort:{col:'idle', dir:'desc'}};
 
 const el = id => document.getElementById(id);
-const app = el('app'), searchEl = el('search'), facetsEl = el('facets'), tabsEl = el('tabs'), countEl = el('count');
+const app = el('app'), searchEl = el('search'), filterbarEl = el('filterbar'), tabsEl = el('tabs'), countEl = el('count');
 function esc(s){ const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
 function ciKey(r){ return r.ci === 'green' ? 'passing' : r.ci === 'failing' ? 'failing' : r.ci === 'running' ? 'running' : 'pending'; }
 
@@ -589,8 +601,10 @@ function auditCell(r){
   if (!r.audit.length) return '<td class="audit"></td>';
   if (r.audit.length <= 4) return '<td class="audit">'+r.audit.map(badge).join('')+'</td>';
   const counts = {}; r.audit.forEach(a => counts[a.status] = (counts[a.status]||0)+1);
-  const parts = AUDIT_ORDER.filter(s => counts[s]).map(s => '<span class="rc '+CLS_OF[s]+'">'+counts[s]+'</span>&thinsp;'+AUDIT_LABEL[s]);
-  return '<td class="audit"><span class="roll"><b>'+r.audit.length+'</b> problems &middot; '+parts.join(' &middot; ')+'</span></td>';
+  const order = AUDIT_ORDER.filter(s => counts[s]);
+  const chips = order.map(s => '<span class="rc '+CLS_OF[s]+'">'+counts[s]+'</span>').join('');
+  const title = r.audit.length+' problems: '+order.map(s => counts[s]+' '+AUDIT_LABEL[s]).join(', ');
+  return '<td class="audit"><span class="roll" title="'+title+'"><b>'+r.audit.length+'</b>'+chips+'</span></td>';
 }
 function flagsHtml(r){ let s = '';
   if (r.ciPending) s += '<span class="flag flag--ci" title="CI has not run yet (often waiting on a maintainer to approve the workflow)">CI pending</span>';
@@ -685,28 +699,46 @@ function render(){
   app.querySelectorAll('[data-reset]').forEach(b => b.addEventListener('click', resetAll));
 }
 function updateTabs(){ tabsEl.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.view === state.view)); }
-function updateChips(){ facetsEl.querySelectorAll('.chip').forEach(c => c.classList.toggle('on', state.facets[c.dataset.group].has(c.dataset.val))); }
+
+function closeMenus(){ filterbarEl.querySelectorAll('.fdd.open').forEach(dd => {
+  dd.classList.remove('open'); dd.querySelector('.fmenu').hidden = true;
+  dd.querySelector('.fbtn').setAttribute('aria-expanded', 'false'); }); }
+function updateFilterUI(){
+  filterbarEl.querySelectorAll('.fdd').forEach(dd => {
+    const g = dd.dataset.group, n = state.facets[g].size;
+    dd.querySelector('.fbtn').classList.toggle('active', n > 0);
+    dd.querySelector('.fbtn-n').textContent = n ? ' ' + n : '';
+    dd.querySelectorAll('.fopt input').forEach(cb => cb.checked = state.facets[g].has(cb.value));
+  });
+  const any = state.q || ['audit','kind','ci'].some(g => state.facets[g].size);
+  const cb = el('clearBtn'); if (cb) cb.hidden = !any;
+}
 
 function buildToolbar(){
   tabsEl.innerHTML = [['queue','Queue'],['all','All PRs'],['fidelity','Fidelity']]
     .map(([k, l]) => '<button class="tab" role="tab" data-view="'+k+'">'+l+'</button>').join('');
   tabsEl.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => { state.view = b.dataset.view; syncUrl(); updateTabs(); render(); }));
   const groups = FACETS.filter(f => f.group !== 'audit' || META.hasAudit);
-  facetsEl.innerHTML = groups.map((f, i) =>
-    (i ? '<span class="fdiv"></span>' : '')
-    + f.opts.map(o => {
-        const dot = f.group === 'audit' ? '<span class="cdot cdot--'+AUDIT_DOT[o]+'"></span>' : '';
-        return '<button class="chip" data-group="'+f.group+'" data-val="'+o+'" title="Filter: '+o+'">'+dot+o+'</button>';
-      }).join('')
-  ).join('');
-  facetsEl.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
-    const set = state.facets[c.dataset.group]; const v = c.dataset.val;
-    set.has(v) ? set.delete(v) : set.add(v); syncUrl(); updateChips(); render();
-  }));
-  searchEl.addEventListener('input', () => { state.q = searchEl.value.trim(); syncUrl(); render(); });
+  filterbarEl.innerHTML = groups.map(f =>
+    '<div class="fdd" data-group="'+f.group+'"><button class="fbtn" type="button" aria-haspopup="true" aria-expanded="false">'
+    + f.label + '<span class="fbtn-n"></span>' + CARET + '</button><div class="fmenu" role="menu" hidden>'
+    + f.opts.map(o => { const dot = f.group === 'audit' ? '<span class="cdot cdot--'+AUDIT_DOT[o]+'"></span>' : '';
+        return '<label class="fopt"><input type="checkbox" data-group="'+f.group+'" value="'+o+'">'+dot+'<span>'+o+'</span></label>'; }).join('')
+    + '</div></div>').join('') + '<button class="clear-btn" id="clearBtn" type="button" hidden>Clear all</button>';
+  filterbarEl.querySelectorAll('.fbtn').forEach(btn => btn.addEventListener('click', e => {
+    e.stopPropagation(); const dd = btn.closest('.fdd'); const open = dd.classList.contains('open'); closeMenus();
+    if (!open){ dd.classList.add('open'); dd.querySelector('.fmenu').hidden = false; btn.setAttribute('aria-expanded', 'true'); } }));
+  filterbarEl.querySelectorAll('.fmenu').forEach(m => m.addEventListener('click', e => e.stopPropagation()));
+  filterbarEl.querySelectorAll('.fopt input').forEach(cb => cb.addEventListener('change', () => {
+    const set = state.facets[cb.dataset.group]; cb.checked ? set.add(cb.value) : set.delete(cb.value);
+    syncUrl(); updateFilterUI(); render(); }));
+  el('clearBtn').addEventListener('click', resetAll);
+  searchEl.addEventListener('input', () => { state.q = searchEl.value.trim(); syncUrl(); updateFilterUI(); render(); });
+  document.addEventListener('click', closeMenus);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenus(); });
 }
 function resetAll(){ state.q = ''; searchEl.value = '';
-  state.facets = {audit:new Set(), kind:new Set(), ci:new Set()}; syncUrl(); updateChips(); render(); }
+  state.facets = {audit:new Set(), kind:new Set(), ci:new Set()}; closeMenus(); syncUrl(); updateFilterUI(); render(); }
 
 function syncUrl(){
   const p = new URLSearchParams();
@@ -729,7 +761,7 @@ renderStrip();
 buildToolbar();
 loadUrl();
 updateTabs();
-updateChips();
+updateFilterUI();
 render();
 </script>
 </body></html>
