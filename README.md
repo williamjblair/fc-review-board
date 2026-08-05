@@ -32,6 +32,15 @@ Each row carries CI status, approval count, size, and small flags:
 - merge conflicts, and PRs whose CI has not run at all (usually waiting on a
   maintainer to approve the workflow for a first-time contributor).
 
+Filters cover the source collection (Erdős, OEIS, Wikipedia, arXiv, papers and
+the rest), whether a PR is a statement or infrastructure, CI state, and the
+audit. Collection comes from the repo's own labels and covers 232 of the 290
+open PRs, which is the useful axis if several people are reviewing and want to
+work in an area they know.
+
+The `ams-*` subject labels would be the better axis, but exactly one open PR
+carries one: they get applied to issues rather than pull requests.
+
 ### The audit column
 
 For PRs that touch `FormalConjectures/ErdosProblems/<N>.lean`, the board joins

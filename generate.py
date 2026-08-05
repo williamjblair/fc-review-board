@@ -38,6 +38,15 @@ STATEMENT_DIRS = ("ErdosProblems/", "Paper/", "Arxiv/", "Books/", "Wikipedia/",
 # The audit feed. Configurable so the board stays a neutral tool: point it at
 # any compatible verdicts.json, or drop the column by pointing it at an empty
 # feed.
+COLLECTION_LABELS = {
+    "erdos-problems": "Erdős", "oeis": "OEIS", "wikipedia": "Wikipedia",
+    "arxiv": "arXiv", "paper": "papers", "Books": "books",
+    "green-problems": "Green", "kourovka": "Kourovka",
+    "written-on-the-wall": "WOWII", "open-quantum-problems": "quantum",
+    "millenium-problems": "millennium", "HilbertProblems": "Hilbert",
+    "mathoverflow": "MathOverflow",
+}
+
 DEFAULT_VERDICTS_URL = "https://erdos.constellate.science/verdicts.json"
 FINDING_URL = "https://erdos.constellate.science/finding.html?n={n}"
 ERDOS_URL = "https://www.erdosproblems.com/{n}"
@@ -294,6 +303,8 @@ def build_record(number: int, pr: dict, basic: dict, verdicts: dict[int, dict],
         "title": pr.get("title") or "",
         "author": pr.get("author") or "ghost",
         "kind": "statement" if is_statement(pr) else "infra",
+        "coll": sorted({COLLECTION_LABELS[l["name"]] for l in (pr.get("labels") or [])
+                        if l["name"] in COLLECTION_LABELS}),
         "bucket": classify(pr, approved, number),
         "ci": ci,
         "ciPending": (not pr.get("is_draft")) and ci == "none",
@@ -582,13 +593,17 @@ const BUCKETS = [['approved','Approved, ready to merge'],['review','Ready for re
 const COLS = [['n','PR'],['title','title'],['author','author'],['kind','kind'],['audit','audit'],['age','open'],['waiting','waiting'],['idle','idle'],['ci','CI'],['appr','&check;'],['churn','&pm;']];
 const COLUMNS = COLS.filter(c => c[0] !== 'audit' || META.hasAudit);
 const SORTABLE = {n:1, author:1, audit:1, age:1, waiting:1, idle:1, ci:1, appr:1, churn:1};
+// Only offer collections that are actually present, so the menu reflects the
+// queue rather than the repo's full label list.
+const COLLECTIONS = [...new Set(DATA.flatMap(r => r.coll))].sort();
 const FACETS = [
   {group:'audit', label:'Audit', opts:['signed','unconditional','conditional','flagged','unaudited']},
   {group:'kind', label:'Kind', opts:['statement','infra']},
+  {group:'coll', label:'Collection', opts:COLLECTIONS},
   {group:'ci', label:'CI', opts:['passing','failing','pending','running']},
 ];
 
-const state = {view:'queue', q:'', facets:{audit:new Set(), kind:new Set(), ci:new Set()}, sort:{col:'idle', dir:'desc'}};
+const state = {view:'queue', q:'', facets:{audit:new Set(), kind:new Set(), coll:new Set(), ci:new Set()}, sort:{col:'idle', dir:'desc'}};
 
 const el = id => document.getElementById(id);
 const app = el('app'), searchEl = el('search'), filterbarEl = el('filterbar'), tabsEl = el('tabs'), countEl = el('count');
@@ -601,6 +616,7 @@ function matches(r){
   const f = state.facets;
   if (f.audit.size && !r.auditStatuses.some(s => f.audit.has(s))) return false;
   if (f.kind.size && !f.kind.has(r.kind)) return false;
+  if (f.coll.size && !r.coll.some(c => f.coll.has(c))) return false;
   if (f.ci.size && !f.ci.has(ciKey(r))) return false;
   return true;
 }
@@ -745,7 +761,7 @@ function updateFilterUI(){
     dd.querySelector('.fbtn-n').textContent = n ? ' ' + n : '';
     dd.querySelectorAll('.fopt input').forEach(cb => cb.checked = state.facets[g].has(cb.value));
   });
-  const any = state.q || ['audit','kind','ci'].some(g => state.facets[g].size);
+  const any = state.q || ['audit','kind','coll','ci'].some(g => state.facets[g].size);
   const cb = el('clearBtn'); if (cb) cb.hidden = !any;
 }
 
@@ -774,13 +790,13 @@ function buildToolbar(){
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenus(); });
 }
 function resetAll(){ state.q = ''; searchEl.value = '';
-  state.facets = {audit:new Set(), kind:new Set(), ci:new Set()}; closeMenus(); syncUrl(); updateFilterUI(); render(); }
+  state.facets = {audit:new Set(), kind:new Set(), coll:new Set(), ci:new Set()}; closeMenus(); syncUrl(); updateFilterUI(); render(); }
 
 function syncUrl(){
   const p = new URLSearchParams();
   if (state.view !== 'queue') p.set('view', state.view);
   if (state.q) p.set('q', state.q);
-  ['audit','kind','ci'].forEach(g => { if (state.facets[g].size) p.set(g, [...state.facets[g]].join(',')); });
+  ['audit','kind','coll','ci'].forEach(g => { if (state.facets[g].size) p.set(g, [...state.facets[g]].join(',')); });
   if (state.view !== 'queue') p.set('sort', state.sort.col+':'+state.sort.dir);
   const h = p.toString();
   history.replaceState(null, '', h ? '#'+h : location.pathname + location.search);
@@ -789,7 +805,7 @@ function loadUrl(){
   const p = new URLSearchParams(location.hash.slice(1));
   if (p.get('view')) state.view = p.get('view');
   if (p.get('q')){ state.q = p.get('q'); searchEl.value = state.q; }
-  ['audit','kind','ci'].forEach(g => { if (p.get(g)) state.facets[g] = new Set(p.get(g).split(',')); });
+  ['audit','kind','coll','ci'].forEach(g => { if (p.get(g)) state.facets[g] = new Set(p.get(g).split(',')); });
   if (p.get('sort')){ const s = p.get('sort').split(':'); state.sort = {col:s[0], dir:s[1] || 'desc'}; }
 }
 
