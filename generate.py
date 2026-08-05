@@ -360,11 +360,11 @@ body { margin: 0; background: var(--paper); color: var(--ink0);
 a { color: var(--accent); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 
-header { margin-bottom: 18px; }
-h1 { font-size: 23px; font-weight: 640; letter-spacing: -.015em; margin: 0 0 7px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 20px;
+  margin-bottom: 14px; }
+h1 { font-size: 23px; font-weight: 640; letter-spacing: -.015em; margin: 0; }
 h1 .h1-sub { color: var(--ink2); font-weight: 460; }
-.lede { margin: 0; max-width: 64ch; color: var(--ink1); font-size: 14.5px; line-height: 1.55; }
-.meta { margin-top: 11px; font-size: 12.5px; color: var(--ink2); }
+.meta { margin-left: auto; font-size: 12.5px; color: var(--ink2); }
 .meta a { color: var(--ink1); text-decoration: none; border-bottom: 1px solid var(--rule2); }
 .meta a:hover { color: var(--accent); border-color: var(--accent); }
 .sep { margin: 0 8px; color: var(--rule2); }
@@ -377,6 +377,11 @@ h1 .h1-sub { color: var(--ink2); font-weight: 460; }
 .grp--audit::before { content: ""; position: absolute; left: 0; top: 3px; bottom: 3px;
   width: 1px; background: var(--rule2); }
 .stat { display: flex; align-items: baseline; gap: 6px; }
+.stat--go { border: 0; background: none; padding: 2px 7px; margin: -2px -7px; border-radius: 5px;
+  font: inherit; cursor: pointer; }
+.stat--go:hover { background: var(--rule); }
+.stat--go.is-on { background: var(--rule); box-shadow: inset 0 0 0 1px var(--rule2); }
+.stat--go:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .sv { font-size: 18px; font-weight: 660; font-variant-numeric: tabular-nums;
   letter-spacing: -.01em; color: var(--ink0); }
 .sl { font-size: 12.5px; color: var(--ink2); }
@@ -505,8 +510,6 @@ footer a:hover { color: var(--accent); border-color: var(--accent); }
 <body><div class="wrap">
 <header>
   <h1>formal-conjectures <span class="h1-sub">&middot; review queue</span></h1>
-  <p class="lede">Open pull requests, oldest waiting first. The audit column shows what the fidelity
-  check found for each linked proof; the merge decision stays the maintainer's.</p>
   <div class="meta">Updated __STAMP__ &middot; refreshes hourly<span class="sep">|</span><a href="__FC_REPO__/pulls">pull requests</a><span class="sep">|</span><a href="__FC_SITE__">formal-conjectures</a><span class="sep">|</span><a href="__BOARD_REPO__">source</a></div>
 </header>
 <div id="strip" class="strip"></div>
@@ -652,20 +655,32 @@ function renderFidelity(recs){
     + '</tbody></table></div></section>').join('');
 }
 
-function statHtml(v, l, cls){ return '<div class="stat"><span class="sv '+(cls||'')+'">'+v+'</span> <span class="sl">'+l+'</span></div>'; }
+function statHtml(v, l, cls, facet){
+  const body = '<span class="sv '+(cls||'')+'">'+v+'</span> <span class="sl">'+l+'</span>';
+  if (!facet) return '<div class="stat">'+body+'</div>';
+  const on = state.facets.audit.has(facet);
+  return '<button type="button" class="stat stat--go'+(on ? ' is-on' : '')+'" data-audit="'+facet
+    + '" aria-pressed="'+on+'" title="Show only '+l+'">'+body+'</button>';
+}
 function renderStrip(){
   const review = DATA.filter(r => r.bucket === 'review');
   const stmt = review.filter(r => r.kind === 'statement').length;
-  const oldest = review.reduce((m, r) => Math.max(m, r.age), 0);
+  // Consistent with the waiting column: time on the queue, age as fallback.
+  const oldest = review.reduce((m, r) => Math.max(m, r.waiting != null ? r.waiting : r.age), 0);
   let html = '<div class="grp">'+statHtml(DATA.length,'open')+statHtml(review.length,'ready to review')+statHtml(stmt,'statements')+statHtml(oldest+'d','oldest waiting')+'</div>';
   if (META.hasAudit){
     const top = DATA.filter(r => r.bucket === 'review' || r.bucket === 'approved').map(r => r.auditTop);
     const c = k => top.filter(x => x === k).length;
-    html += '<div class="grp grp--audit">'+statHtml(c('ab--signed'),'signed faithful','sv--gold')
-      + statHtml(c('ab--conditional')+c('ab--variant'),'conditional','sv--brass')
-      + statHtml(c('ab--discrepancy'),'flagged','sv--cinnabar')+'</div>';
+    html += '<div class="grp grp--audit">'+statHtml(c('ab--signed'),'signed faithful','sv--gold','signed')
+      + statHtml(c('ab--conditional')+c('ab--variant'),'conditional','sv--brass','conditional')
+      + statHtml(c('ab--discrepancy'),'flagged','sv--cinnabar','flagged')+'</div>';
   }
   el('strip').innerHTML = html;
+  el('strip').querySelectorAll('.stat--go').forEach(b => b.addEventListener('click', () => {
+    const set = state.facets.audit, v = b.dataset.audit;
+    set.has(v) ? set.delete(v) : set.add(v);
+    syncUrl(); updateFilterUI(); render(); renderStrip();
+  }));
 }
 
 function render(){

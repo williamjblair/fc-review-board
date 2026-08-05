@@ -30,10 +30,20 @@ mkdir -p "$WORK"
 
 remaining () { gh api graphql -f query='{ rateLimit { remaining } }' --jq '.data.rateLimit.remaining' 2>/dev/null || echo 0; }
 
+# Always start from a pristine upstream tree. The patches below are applied to
+# a working copy, so a reused clone would already carry them from the previous
+# run - the branch substitution would then match nothing and the check below
+# would fire. Resetting also picks up upstream changes on a warm tree, which is
+# the whole point of not forking.
 if [ ! -d "$CORE/.git" ]; then
-  echo "==> fetching queueboard-core"
-  git clone --depth 1 ${QB_REF:+--branch "$QB_REF"} \
+  echo "==> cloning queueboard-core"
+  git clone --quiet --depth 1 ${QB_REF:+--branch "$QB_REF"} \
     https://github.com/leanprover-community/queueboard-core.git "$CORE"
+else
+  echo "==> refreshing queueboard-core"
+  git -C "$CORE" fetch --quiet --depth 1 origin ${QB_REF:-HEAD}
+  git -C "$CORE" reset --quiet --hard FETCH_HEAD
+  git -C "$CORE" clean -qfd
 fi
 ( cd "$CORE" && uv sync --quiet )
 
@@ -146,11 +156,14 @@ build () {
 # A first pass tells us who is on the review queue; only those need timings.
 echo "==> classifying"
 build
-jq -r '.lists.dashboards.Queue[]?' api/snapshot.json > queue.txt || true
-echo "    $(wc -l < queue.txt | tr -d ' ') on the review queue"
+# Approved PRs sit at the top of the board, so they need timings too even
+# though queueboard does not count them as "on the queue".
+jq -r '(.lists.dashboards.Queue // []) + (.lists.dashboards.Approved // []) | unique | .[]' \
+  api/snapshot.json > queue.txt || true
+echo "    $(wc -l < queue.txt | tr -d ' ') on the review queue or approved"
 
-# --- pass 2: timeline for the review queue only -------------------------------
-echo "==> timelines for the review queue (rate budget: $(remaining))"
+# --- pass 2: timelines for the rows people actually read -------------------------------
+echo "==> timelines for queue + approved (rate budget: $(remaining))"
 while read -r n; do
   if [ "$(remaining)" -lt 400 ]; then
     echo "    stopping early: rate budget low. Board still builds; the PRs" >&2
