@@ -677,14 +677,17 @@ function renderStrip(){
   // Consistent with the waiting column: time on the queue, age as fallback.
   const oldest = review.reduce((m, r) => Math.max(m, r.waiting != null ? r.waiting : r.age), 0);
   let html = '<div class="grp">'+statHtml(DATA.length,'open')+statHtml(review.length,'ready to review')+statHtml(stmt,'statements')+statHtml(oldest+'d','oldest waiting')+'</div>';
+  // Signed-faithful and conditional counts used to sit here. At 1 and 3 against
+  // 146 PRs they cost a third of the header for a signal nobody acts on; the
+  // per-row chips and the Fidelity view carry that detail already. A signed
+  // *unfaithful* proof is different in kind, so it appears only when there is
+  // one, which is the only time it means anything.
   if (META.hasAudit){
     const top = DATA.filter(r => r.bucket === 'review' || r.bucket === 'approved').map(r => r.auditTop);
-    const c = k => top.filter(x => x === k).length;
-    html += '<div class="grp grp--audit">'+statHtml(c('ab--signed'),'signed faithful','sv--gold','signed')
-      + statHtml(c('ab--conditional')+c('ab--variant'),'conditional','sv--brass','conditional')
-      + statHtml(c('ab--discrepancy'),'flagged','sv--cinnabar','flagged')+'</div>';
+    const flagged = top.filter(x => x === 'ab--discrepancy').length;
+    if (flagged) html += '<div class="grp grp--audit">'
+      + statHtml(flagged, 'flagged by the audit', 'sv--cinnabar', 'flagged') + '</div>';
   }
-  el('strip').innerHTML = html;
   el('strip').querySelectorAll('.stat--go').forEach(b => b.addEventListener('click', () => {
     const set = state.facets.audit, v = b.dataset.audit;
     set.has(v) ? set.delete(v) : set.add(v);
