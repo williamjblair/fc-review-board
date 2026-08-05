@@ -21,9 +21,16 @@ one that has waited a fortnight throughout. The author and draft groups sort by
 idle time instead, and show `--` under waiting, since a statement that has never
 been ready for review has no queue time to report.
 
-Each row carries CI status, approval count, size, and small flags for merge
-conflicts and PRs whose CI has not run yet (often waiting on a maintainer to
-approve the workflow).
+Each row carries CI status, approval count, size, and small flags:
+
+- **CI *n* old** when the checks last ran a month or more ago. A passing tick is
+  only as good as the `main` it ran against, and 111 of the open PRs currently
+  import a module that was deleted in July while still showing green. The flag
+  reports the age and leaves the judgement to the reviewer.
+- **the assignee**, when a PR has one. Sparse, because people rarely set one,
+  which is the thing worth changing if several people start reviewing at once.
+- merge conflicts, and PRs whose CI has not run at all (usually waiting on a
+  maintainer to approve the workflow for a first-time contributor).
 
 ### The audit column
 

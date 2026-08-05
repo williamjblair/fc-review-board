@@ -59,8 +59,11 @@ BOARD_REPO_URL = "https://github.com/williamjblair/fc-review-board"
 # parsing check rollups, deciding what "awaiting review" means) are maintained
 # upstream rather than here.
 #
-# Two fields queueboard does not carry are fetched separately: createdAt, and
-# whether the PR has a merge conflict. mergeStateStatus is computed on demand
+# Three things queueboard does not carry are fetched separately: createdAt,
+# whether the PR has a merge conflict, and when its checks last ran. That last
+# one matters because a passing tick says nothing about the current main: 111
+# of the open PRs import a module deleted in July and still show green, because
+# their checks ran before the deletion. mergeStateStatus is computed on demand
 # by GitHub, so this stays on small pages: 50 returns truncated responses
 # under load and 100 502s outright.
 
@@ -72,7 +75,11 @@ query($cursor: String) {
   repository(owner: "%s", name: "%s") {
     pullRequests(states: OPEN, first: 25, after: $cursor) {
       pageInfo { hasNextPage endCursor }
-      nodes { number createdAt mergeStateStatus }
+      nodes {
+        number createdAt mergeStateStatus
+        commits(last: 1) { nodes { commit { statusCheckRollup {
+          contexts(first: 1) { nodes { ... on CheckRun { completedAt } } } } } } }
+      }
     }
   }
 }
@@ -161,6 +168,15 @@ def is_statement(pr: dict) -> bool:
 
 def approvals(pr: dict) -> int:
     return len(pr.get("approvals") or [])
+
+
+def ci_ran_at(basic: dict) -> str | None:
+    """When this PR's checks last completed."""
+    try:
+        return (basic["commits"]["nodes"][0]["commit"]["statusCheckRollup"]
+                ["contexts"]["nodes"][0]["completedAt"])
+    except (KeyError, IndexError, TypeError):
+        return None
 
 
 def has_conflict(pr: dict, basic: dict) -> bool:
@@ -286,6 +302,8 @@ def build_record(number: int, pr: dict, basic: dict, verdicts: dict[int, dict],
         "waiting": waiting,
         "idle": idle if idle is not None else age,
         "appr": approvals(pr),
+        "who": sorted(pr.get("assignees") or []),
+        "ciAge": (days_since(ran, now) if (ran := ci_ran_at(basic)) else None),
         "churn": (pr.get("additions") or 0) + (pr.get("deletions") or 0),
         "audit": audit,
         "auditTop": pr_top_status(audit),
@@ -562,6 +580,7 @@ const CARET = '<svg width="9" height="9" viewBox="0 0 12 12" aria-hidden="true">
 const FID_TITLE = {flagged:'Flagged unfaithful', conditional:'Conditional — rests on an assumption', signed:'Signed faithful', unconditional:'Machine-checked unconditional', unaudited:'Not yet audited'};
 const BUCKETS = [['approved','Approved, ready to merge'],['review','Ready for review'],['author','Waiting on the author'],['draft','Draft / work in progress']];
 const COLS = [['n','PR'],['title','title'],['author','author'],['kind','kind'],['audit','audit'],['age','open'],['waiting','waiting'],['idle','idle'],['ci','CI'],['appr','&check;'],['churn','&pm;']];
+const COLUMNS = COLS.filter(c => c[0] !== 'audit' || META.hasAudit);
 const SORTABLE = {n:1, author:1, audit:1, age:1, waiting:1, idle:1, ci:1, appr:1, churn:1};
 const FACETS = [
   {group:'audit', label:'Audit', opts:['signed','unconditional','conditional','flagged','unaudited']},
@@ -597,6 +616,12 @@ function auditCell(r){
   return '<td class="audit"><span class="roll" title="'+title+'"><b>'+r.audit.length+'</b>'+chips+'</span></td>';
 }
 function flagsHtml(r){ let s = '';
+  // A tick from months ago was earned against a main that has moved since.
+  // Reported as an age, not as a verdict: the reviewer decides what it means.
+  if (r.ciAge != null && r.ciAge >= 30) s += '<span class="flag flag--stale" title="checks last ran '
+    + r.ciAge + ' days ago, against an older main">CI ' + (r.ciAge >= 60 ? Math.round(r.ciAge/30) + 'mo' : r.ciAge + 'd') + ' old</span>';
+  if (r.who && r.who.length) s += '<span class="flag flag--who" title="assigned to '
+    + r.who.join(', ') + '">' + esc(r.who[0]) + (r.who.length > 1 ? ' +' + (r.who.length - 1) : '') + '</span>';
   if (r.ciPending) s += '<span class="flag flag--ci" title="CI has not run yet (often waiting on a maintainer to approve the workflow)">CI pending</span>';
   if (r.conflict) s += '<span class="flag flag--conflict" title="Merge conflict with the base branch">conflict</span>';
   return s; }
@@ -608,7 +633,7 @@ function rowHtml(r){
     + '<td class="ttl"><span class="ttl-t">'+esc(r.title)+'</span>'+flagsHtml(r)+'</td>'
     + '<td class="who">'+esc(r.author)+'</td>'
     + '<td><span class="tag tag--'+r.kind+'">'+r.kind+'</span></td>'
-    + auditCell(r)
+    + (META.hasAudit ? auditCell(r) : '')
     + '<td class="mono">'+r.age+'d</td>'
     + '<td class="mono" title="time actually spent on the review queue">'+(r.waiting == null ? '<span class="dash">&mdash;</span>' : r.waiting+'d')+'</td>'
     + '<td class="mono">'+r.idle+'d</td>'
@@ -629,7 +654,7 @@ function sortRecs(recs){ const {col, dir} = state.sort, m = dir === 'asc' ? 1 : 
     return typeof x === 'string' ? m*x.localeCompare(y) : m*(x - y); }); }
 
 function tableHtml(recs, sortable){
-  const head = COLS.map(([k, l]) => {
+  const head = COLUMNS.map(([k, l]) => {
     const s = sortable && SORTABLE[k], cur = state.sort.col === k;
     const arrow = cur ? '<span class="caret'+(state.sort.dir === 'asc' ? ' up' : '')+'">'+CARET+'</span>' : '';
     return s ? '<th class="sortable'+(cur?' active':'')+'" data-col="'+k+'" title="Sort by '+k+'">'+l+arrow+'</th>' : '<th>'+l+'</th>';
@@ -726,6 +751,7 @@ function updateFilterUI(){
 
 function buildToolbar(){
   tabsEl.innerHTML = [['queue','Queue'],['all','All PRs'],['fidelity','Fidelity']]
+    .filter(v => v[0] !== 'fidelity' || META.hasAudit)
     .map(([k, l]) => '<button class="tab" role="tab" data-view="'+k+'">'+l+'</button>').join('');
   tabsEl.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => { state.view = b.dataset.view; syncUrl(); updateTabs(); render(); }));
   const groups = FACETS.filter(f => f.group !== 'audit' || META.hasAudit);
