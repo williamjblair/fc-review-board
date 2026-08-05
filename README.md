@@ -32,28 +32,47 @@ rather than a long list of badges.
 
 ## How it works
 
-`generate.py` reads two inputs and writes a single self-contained `index.html`:
+PR state comes from [queueboard](https://github.com/leanprover-community/queueboard-core),
+the tool mathlib's own review dashboard is built on. `sync.sh` clones it,
+repoints three mathlib-specific constants (default branch, and two hardcoded
+mathlib4 URLs), runs its pipeline against formal-conjectures and writes
+`snapshot.json`. `generate.py` reads that plus the audit feed and writes a
+single self-contained `index.html`.
 
-- open PRs, via `gh pr list` (the GitHub API);
-- the audit feed, a `verdicts.json` snapshot (configurable, see below).
+Leaning on queueboard means the parts that break when GitHub changes a response
+shape, or when the repository adopts a new label, are maintained upstream. What
+lives here is the part nobody upstream would maintain: the audit join, the
+statement/infra split, and the page itself.
 
-No server, no database, no client-side fetching. A GitHub Action
-(`.github/workflows/board.yml`) regenerates the page hourly and deploys it to
+It also brings **waiting** - the time a PR has actually spent on the review
+queue, reconstructed from its timeline, excluding spells when the ball was in
+the author's court. That is a fairer ranking than age, and it is what the ready
+-for-review table sorts on. PRs whose timeline could not be reconstructed show
+`--` and fall back to age.
+
+`sync.sh` is deliberately stateless: no cached PR data, nothing to go stale or
+need repairing. It uses two queries - a cheap one (~1 rate-limit point) for
+every open PR, and an expensive one (~5 points) only for PRs on the review
+queue, since only those need timings. A full run is around 1100 of the 5000
+hourly points and a few minutes. If the budget runs low mid-run it stops early
+and the board still builds, with those PRs falling back to age.
+
+A GitHub Action (`.github/workflows/board.yml`) does this hourly and deploys to
 GitHub Pages.
 
 ## Run it locally
 
+Needs `gh` (authenticated), `jq` and [`uv`](https://docs.astral.sh/uv/).
+
 ```bash
-gh pr list -R google-deepmind/formal-conjectures --state open --limit 200 \
-  --json number,title,author,labels,isDraft,createdAt,updatedAt,statusCheckRollup,reviewDecision,mergeStateStatus,latestReviews,additions,deletions,files \
-  > prs.json
 curl -sfL https://erdos.constellate.science/verdicts.json -o verdicts.json
+./sync.sh                      # writes snapshot.json (a few minutes)
 python3 generate.py            # writes index.html
 python3 -m http.server         # then open http://localhost:8000
 ```
 
-`generate.py` uses a local `prs.json` / `verdicts.json` when present and
-fetches them otherwise, so re-running is cheap.
+`sync.sh` keeps its working tree in `.queueboard/`, so a second run reuses the
+clone. `generate.py` on its own is instant once `snapshot.json` exists.
 
 ## Configuration
 
@@ -64,6 +83,8 @@ empty feed to drop the audit column entirely.
 
 ## Attribution
 
-PR data comes from the GitHub API. Problem-audit data comes from the
-[Erdős frontier](https://erdos.constellate.science) snapshot. The queue design
-follows mathlib's queueboard.
+PR state and queue timings come from
+[queueboard](https://github.com/leanprover-community/queueboard-core), by Johan
+Commelin, Michael Rothgang and Bryan Gin-ge Chen, used unmodified apart from
+three repointed constants. Problem-audit data comes from the
+[Erdős frontier](https://erdos.constellate.science) snapshot.

@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+#
+# Produce snapshot.json for generate.py, using queueboard - the tool mathlib's
+# review dashboard is built on - to do the fetching and the state classification.
+#
+# Two queries, deliberately:
+#   basic_pr_info  (~1 rate-limit point each) for every open PR. Carries labels,
+#                  CI rollup, files, diff size, reviews: everything the board
+#                  needs except timings.
+#   pr_info        (~5 points each) only for PRs queueboard puts on the review
+#                  queue. This one walks the timeline, which is what makes
+#                  `total_queue_time` possible, and is far too expensive to run
+#                  over every open PR - doing so exhausts the 5000/hour budget.
+#
+# A full cold run costs roughly 900 points and a few minutes, so there is no
+# cache and no incremental sync to get wrong. Everything is refetched each run.
+#
+# Usage: QB_REF=master ./sync.sh   (expects gh, jq, uv on PATH)
+
+set -euo pipefail
+
+REPO="${QB_REPO:-google-deepmind/formal-conjectures}"
+BASE="${QB_BASE:-main}"
+OWNER="${REPO%%/*}"
+NAME="${REPO##*/}"
+WORK="${QB_WORK:-$PWD/.queueboard}"
+CORE="$WORK/core"
+
+mkdir -p "$WORK"
+
+remaining () { gh api graphql -f query='{ rateLimit { remaining } }' --jq '.data.rateLimit.remaining' 2>/dev/null || echo 0; }
+
+if [ ! -d "$CORE/.git" ]; then
+  echo "==> fetching queueboard-core"
+  git clone --depth 1 ${QB_REF:+--branch "$QB_REF"} \
+    https://github.com/leanprover-community/queueboard-core.git "$CORE"
+fi
+( cd "$CORE" && uv sync --quiet )
+
+# queueboard hardcodes mathlib's default branch and PR URLs. Three constants;
+# patched here rather than forked so the clone stays a clean upstream checkout.
+echo "==> repointing queueboard at $REPO ($BASE)"
+sed -i.bak "s/\"master\"/\"$BASE\"/g" \
+  "$CORE/src/queueboard/compute_dashboard_prs.py" "$CORE/src/queueboard/dashboard.py"
+sed -i.bak "s|leanprover-community/mathlib4|$REPO|g" \
+  "$CORE/src/queueboard/compute_dashboard_prs.py" "$CORE/src/queueboard/dashboard_data.py"
+
+cd "$WORK"
+: > stubborn_prs.txt
+mkdir -p data processed_data
+# Reviewer suggestions are a mathlib feature we do not use, but the pipeline
+# insists the file exists.
+[ -f reviewer-topics.json ] || echo '{}' > reviewer-topics.json
+
+# GitHub 502s on individual PR queries often enough that one must not end the
+# run. Retry with backoff; if a PR still will not come back, skip it and carry
+# on - a board missing one row beats no board.
+fetch_pr () {  # query-file, pr-number, destination
+  local q="$1" n="$2" dest="$3" tmp attempt
+  tmp="$(mktemp)"
+  for attempt in 1 2 3 4 5; do
+    if gh api graphql -f owner="$OWNER" -f repo="$NAME" -F prNumber="$n" \
+         -F query=@"$q" > "$tmp" 2>/dev/null \
+       && jq -e . "$tmp" >/dev/null 2>&1 \
+       && ! jq -e 'has("errors")' "$tmp" >/dev/null 2>&1; then
+      jq '.' "$tmp" > "$dest"; rm -f "$tmp"; return 0
+    fi
+    sleep $(( attempt * 4 ))
+  done
+  rm -f "$tmp"; return 1
+}
+
+# --- open PR listings, in the shape dashboard_data expects --------------------
+query () {
+  echo "query(\$endCursor: String) {
+    search(query: \"repo:$REPO $1\", type: ISSUE, first: 25, after: \$endCursor) {
+      pageInfo { hasNextPage endCursor }
+      nodes { ... on PullRequest {
+        number url author { ... on User { login url } } title state updatedAt
+        labels(first: 10, orderBy: {direction: DESC, field: CREATED_AT}) {
+          nodes { name color url } } } }
+    } }"
+}
+echo "==> listing open PRs"
+gh api graphql --paginate --slurp -f query="$(query 'sort:updated-asc is:pr state:open -label:merge-conflict -label:blocked-by-other-PR')" \
+  | jq '{"output": .}' > all-open-PRs-1.json
+for f in all-open-PRs-2a all-open-PRs-2b all-open-PRs-3; do echo '{"output":[]}' > "$f.json"; done
+
+jq -r '.output[].data.search.nodes[].number' all-open-PRs-1.json | sort -n > prs.txt
+echo "    $(wc -l < prs.txt | tr -d ' ') open"
+
+# --- pass 1: cheap metadata for every PR --------------------------------------
+echo "==> basic metadata for every PR"
+missing=0
+while read -r n; do
+  mkdir -p "data/$n-basic"
+  if ! fetch_pr "$CORE/src/queueboard/queries/basic_pr_info.graphql" "$n" \
+       "data/$n-basic/basic_pr_info.json"; then
+    rm -rf "data/$n-basic"; missing=$(( missing + 1 ))
+    echo "    warning: no data for #$n" >&2
+  fi
+done < prs.txt
+[ "$missing" -gt 0 ] && echo "    $missing PR(s) unavailable" >&2 || true
+
+build () {
+  # Chatty on stdout, and its warnings are about mathlib conventions we do not
+  # follow, so stdout is dropped. stderr is kept: a real failure should be
+  # visible in the log rather than swallowed.
+  ( cd "$WORK"
+    uv run --project "$CORE" python -m queueboard.process >/dev/null
+    uv run --project "$CORE" python -m queueboard.dashboard_data \
+      all-open-PRs-1.json all-open-PRs-2a.json all-open-PRs-2b.json all-open-PRs-3.json \
+      >/dev/null )
+}
+
+# A first pass tells us who is on the review queue; only those need timings.
+echo "==> classifying"
+build
+jq -r '.lists.dashboards.Queue[]?' api/snapshot.json > queue.txt || true
+echo "    $(wc -l < queue.txt | tr -d ' ') on the review queue"
+
+# --- pass 2: timeline for the review queue only -------------------------------
+echo "==> timelines for the review queue (rate budget: $(remaining))"
+while read -r n; do
+  if [ "$(remaining)" -lt 400 ]; then
+    echo "    stopping early: rate budget low. Board still builds; the PRs" >&2
+    echo "    without timings fall back to age." >&2
+    break
+  fi
+  mkdir -p "data/$n"
+  if fetch_pr "$CORE/src/queueboard/queries/pr_info.graphql" "$n" "data/$n/pr_info.json"; then
+    rm -rf "data/$n-basic"      # full data supersedes basic
+  else
+    rm -rf "data/$n"            # keep the basic record; this PR loses its timings
+  fi
+done < queue.txt
+
+echo "==> rebuilding with timings"
+build
+cp api/snapshot.json "${QB_OUT:-$OLDPWD}/snapshot.json"
+echo "==> wrote snapshot.json ($(jq '.prs | length' api/snapshot.json) PRs, budget left $(remaining))"

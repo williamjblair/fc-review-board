@@ -28,17 +28,31 @@ jobs:
         with:
           python-version: "3.12"
 
+      - uses: astral-sh/setup-uv@v5
+
       - name: Fetch audit feed
         env:
           VERDICTS_URL: ${{ vars.VERDICTS_URL }}
         run: |
           curl -sfL "${VERDICTS_URL:-https://erdos.constellate.science/verdicts.json}" -o verdicts.json
 
-      # generate.py fetches the open PRs itself, paginating the GitHub GraphQL
-      # API in small pages (a single 200-PR query with file lists 502s). It
-      # exits non-zero if the fetch fails, so the run fails rather than
-      # deploying a broken board; the last good deploy stays and the hourly
-      # cron retries.
+      # PR state and timings come from queueboard, the tool mathlib's review
+      # dashboard is built on, so the fetching and the "what counts as awaiting
+      # review" rules are maintained upstream rather than here. sync.sh clones
+      # it, repoints three mathlib-specific constants, and writes snapshot.json.
+      #
+      # Deliberately stateless: no cached PR data, so nothing can go stale or
+      # need repairing. A cold run costs ~1100 of the 5000 hourly rate-limit
+      # points and a few minutes, which an hourly schedule absorbs easily.
+      - name: Sync PR state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./sync.sh
+
+      # generate.py reads snapshot.json plus the audit feed and writes
+      # index.html. It exits non-zero if the snapshot is missing or empty, so a
+      # bad run fails rather than deploying an empty board; the last good
+      # deploy stays and the hourly cron retries.
       - name: Generate board
         env:
           GH_TOKEN: ${{ github.token }}
