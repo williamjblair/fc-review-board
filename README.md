@@ -53,9 +53,10 @@ the author's court. That is a fairer ranking than age, and it is what the ready
 `sync.sh` is deliberately stateless: no cached PR data, nothing to go stale or
 need repairing. It uses two queries - a cheap one (~1 rate-limit point) for
 every open PR, and an expensive one (~5 points) only for PRs on the review
-queue, since only those need timings. A full run is around 1100 of the 5000
-hourly points and a few minutes. If the budget runs low mid-run it stops early
-and the board still builds, with those PRs falling back to age.
+queue, since only those need timings. Fetches run eight at a time, since
+several hundred half-second round trips in series is most of a slow run. A full
+run is around 600 of the 5000 hourly points and about a minute. If the budget will not cover the timings it skips
+them and the board still builds, with those PRs falling back to age.
 
 A GitHub Action (`.github/workflows/board.yml`) does this hourly and deploys to
 GitHub Pages.

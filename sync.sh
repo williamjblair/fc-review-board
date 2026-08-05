@@ -97,6 +97,7 @@ mkdir -p data processed_data
 # on - a board missing one row beats no board.
 fetch_pr () {  # query-file, pr-number, destination
   local q="$1" n="$2" dest="$3" tmp attempt
+  mkdir -p "$(dirname "$dest")"
   tmp="$(mktemp)"
   for attempt in 1 2 3 4 5; do
     if gh api graphql -f owner="$OWNER" -f repo="$NAME" -F prNumber="$n" \
@@ -108,6 +109,19 @@ fetch_pr () {  # query-file, pr-number, destination
     sleep $(( attempt * 4 ))
   done
   rm -f "$tmp"; return 1
+}
+export -f fetch_pr
+export OWNER NAME
+
+# 438 round trips at half a second each is four minutes of waiting on the
+# network in series. GitHub is happy with modest concurrency, so fan out.
+JOBS="${QB_JOBS:-8}"
+
+fetch_all () {  # query-file, dest-pattern (%s -> PR number), list-file
+  local q="$1" pat="$2" list="$3"
+  QB_Q="$q" QB_PAT="$pat" xargs -P "$JOBS" -I{} bash -c \
+    'dest=$(printf "$QB_PAT" "$1"); fetch_pr "$QB_Q" "$1" "$dest" || { rm -rf "$(dirname "$dest")"; echo "$1"; }' \
+    _ {} < "$list"
 }
 
 # --- open PR listings, in the shape dashboard_data expects --------------------
@@ -131,16 +145,9 @@ echo "    $(wc -l < prs.txt | tr -d ' ') open"
 
 # --- pass 1: cheap metadata for every PR --------------------------------------
 echo "==> basic metadata for every PR"
-missing=0
-while read -r n; do
-  mkdir -p "data/$n-basic"
-  if ! fetch_pr "$CORE/src/queueboard/queries/basic_pr_info.graphql" "$n" \
-       "data/$n-basic/basic_pr_info.json"; then
-    rm -rf "data/$n-basic"; missing=$(( missing + 1 ))
-    echo "    warning: no data for #$n" >&2
-  fi
-done < prs.txt
-[ "$missing" -gt 0 ] && echo "    $missing PR(s) unavailable" >&2 || true
+failed=$(fetch_all "$CORE/src/queueboard/queries/basic_pr_info.graphql" \
+  "data/%s-basic/basic_pr_info.json" prs.txt)
+[ -n "$failed" ] && echo "    unavailable: $(echo "$failed" | tr '\n' ' ')" >&2 || true
 
 build () {
   # Chatty on stdout, and its warnings are about mathlib conventions we do not
@@ -164,19 +171,18 @@ echo "    $(wc -l < queue.txt | tr -d ' ') on the review queue or approved"
 
 # --- pass 2: timelines for the rows people actually read -------------------------------
 echo "==> timelines for queue + approved (rate budget: $(remaining))"
-while read -r n; do
-  if [ "$(remaining)" -lt 400 ]; then
-    echo "    stopping early: rate budget low. Board still builds; the PRs" >&2
-    echo "    without timings fall back to age." >&2
-    break
-  fi
-  mkdir -p "data/$n"
-  if fetch_pr "$CORE/src/queueboard/queries/pr_info.graphql" "$n" "data/$n/pr_info.json"; then
-    rm -rf "data/$n-basic"      # full data supersedes basic
-  else
-    rm -rf "data/$n"            # keep the basic record; this PR loses its timings
-  fi
-done < queue.txt
+# One budget check for the whole pass rather than one per PR: with requests in
+# flight concurrently there is no safe moment between them anyway. Each of
+# these costs about five points.
+need=$(( $(wc -l < queue.txt) * 5 + 200 ))
+if [ "$(remaining)" -lt "$need" ]; then
+  echo "    skipping: needs ~$need points, $(remaining) left." >&2
+  echo "    The board still builds; these PRs fall back to age." >&2
+else
+  fetch_all "$CORE/src/queueboard/queries/pr_info.graphql" "data/%s/pr_info.json" queue.txt >/dev/null
+  # Full data supersedes the basic record.
+  while read -r n; do [ -f "data/$n/pr_info.json" ] && rm -rf "data/$n-basic"; done < queue.txt
+fi
 
 echo "==> rebuilding with timings"
 build
