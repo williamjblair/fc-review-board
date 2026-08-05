@@ -61,7 +61,7 @@ BOARD_REPO_URL = "https://github.com/williamjblair/fc-review-board"
 #
 # Two fields queueboard does not carry are fetched separately: createdAt, and
 # whether the PR has a merge conflict. mergeStateStatus is computed on demand
-# by GitHub, so this stays on small pages too - first: 100 502s.
+# by GitHub, so this stays on modest pages - 50 works, 100 502s.
 
 _OWNER, _NAME = REPO.split("/")
 SNAPSHOT = HERE / "snapshot.json"
@@ -69,7 +69,7 @@ SNAPSHOT = HERE / "snapshot.json"
 BASICS_QUERY = """
 query($cursor: String) {
   repository(owner: "%s", name: "%s") {
-    pullRequests(states: OPEN, first: 25, after: $cursor) {
+    pullRequests(states: OPEN, first: 50, after: $cursor) {
       pageInfo { hasNextPage endCursor }
       nodes { number createdAt mergeStateStatus }
     }
