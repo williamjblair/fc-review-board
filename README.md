@@ -15,10 +15,15 @@ is their call.
 ## What it shows
 
 PRs are grouped into approved / ready-for-review / waiting-on-author / draft.
-Ready-for-review sorts by how long each has been open; the waiting groups sort
-by idle time. Each row carries CI status, approval count, size, and small flags
-for merge conflicts and PRs whose CI has not run yet (often waiting on a
-maintainer to approve the workflow).
+Ready-for-review sorts by **waiting** time, not by age: a pull request that sat
+with its author for two months and has been on the queue for a week ranks below
+one that has waited a fortnight throughout. The author and draft groups sort by
+idle time instead, and show `--` under waiting, since a statement that has never
+been ready for review has no queue time to report.
+
+Each row carries CI status, approval count, size, and small flags for merge
+conflicts and PRs whose CI has not run yet (often waiting on a maintainer to
+approve the workflow).
 
 ### The audit column
 
