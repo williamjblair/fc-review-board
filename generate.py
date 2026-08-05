@@ -688,6 +688,7 @@ function renderStrip(){
     if (flagged) html += '<div class="grp grp--audit">'
       + statHtml(flagged, 'flagged by the audit', 'sv--cinnabar', 'flagged') + '</div>';
   }
+  el('strip').innerHTML = html;
   el('strip').querySelectorAll('.stat--go').forEach(b => b.addEventListener('click', () => {
     const set = state.facets.audit, v = b.dataset.audit;
     set.has(v) ? set.delete(v) : set.add(v);
