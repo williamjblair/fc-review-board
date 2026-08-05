@@ -51,111 +51,75 @@ FC_SITE_URL = "https://google-deepmind.github.io/formal-conjectures"
 BOARD_REPO_URL = "https://github.com/williamjblair/fc-review-board"
 
 # --- data -----------------------------------------------------------------
-# A single `gh pr list --json ...files...` over ~200 PRs asks GitHub for tens
-# of thousands of nodes in one query and reliably 502s. Paginate instead: small
-# pages via `gh api graphql`, transformed into the flat shape the renderer uses.
+# PR state comes from queueboard, the same tool mathlib's review dashboard is
+# built on. Its pipeline writes api/snapshot.json: a versioned
+# {meta, lists, prs} document with each PR's classified status, CI state,
+# labels, diff size and the cumulative time it has actually spent on the review
+# queue. Consuming that means the fragile parts (paginating the GitHub API,
+# parsing check rollups, deciding what "awaiting review" means) are maintained
+# upstream rather than here.
+#
+# Two fields queueboard does not carry are fetched separately: createdAt, and
+# whether the PR has a merge conflict. mergeStateStatus is computed on demand
+# by GitHub, so this stays on small pages too - first: 100 502s.
 
 _OWNER, _NAME = REPO.split("/")
-GRAPHQL_QUERY = """
+SNAPSHOT = HERE / "snapshot.json"
+
+BASICS_QUERY = """
 query($cursor: String) {
   repository(owner: "%s", name: "%s") {
     pullRequests(states: OPEN, first: 25, after: $cursor) {
       pageInfo { hasNextPage endCursor }
-      nodes {
-        number title isDraft createdAt updatedAt reviewDecision
-        mergeStateStatus additions deletions
-        author { login }
-        labels(first: 20) { nodes { name } }
-        latestOpinionatedReviews(first: 30) { nodes { state } }
-        files(first: 100) { nodes { path } }
-        commits(last: 1) { nodes { commit { statusCheckRollup {
-          contexts(first: 100) { nodes {
-            __typename
-            ... on CheckRun { name conclusion }
-            ... on StatusContext { context state }
-          } }
-        } } } }
-      }
+      nodes { number createdAt mergeStateStatus }
     }
   }
 }
 """ % (_OWNER, _NAME)
 
-
-def _gql_page(cursor: str | None) -> dict:
-    cmd = ["gh", "api", "graphql", "-f", f"query={GRAPHQL_QUERY}"]
-    if cursor is not None:
-        cmd += ["-F", f"cursor={cursor}"]
-    out = subprocess.run(cmd, capture_output=True, text=True)
-    if out.returncode != 0:
-        raise RuntimeError(out.stderr.strip()[:200] or "gh api graphql failed")
-    return json.loads(out.stdout)
+# queueboard's status vocabulary -> this board's buckets.
+BUCKET = {"AwaitingReview": "review", "AwaitingAuthor": "author", "NotReady": "draft"}
+CI = {"pass": "green", "fail": "failing"}
 
 
-def _status_rollup(node: dict) -> list[dict]:
-    commits = (node.get("commits") or {}).get("nodes") or []
-    if not commits:
-        return []
-    scr = (commits[0].get("commit") or {}).get("statusCheckRollup")
-    if not scr:
-        return []
-    out = []
-    for c in (scr.get("contexts") or {}).get("nodes") or []:
-        if c.get("__typename") == "CheckRun":
-            out.append({"name": c.get("name"), "conclusion": c.get("conclusion")})
-        elif c.get("__typename") == "StatusContext":
-            out.append({"name": c.get("context"), "conclusion": c.get("state")})
-    return out
+def _unwrap(v):
+    """queueboard tags some values as {__type__, __value__}; take the value."""
+    return v.get("__value__") if isinstance(v, dict) and "__value__" in v else v
 
 
-def _transform(n: dict) -> dict:
-    return {
-        "number": n["number"], "title": n["title"], "isDraft": n["isDraft"],
-        "createdAt": n["createdAt"], "updatedAt": n["updatedAt"],
-        "reviewDecision": n.get("reviewDecision"),
-        "mergeStateStatus": n.get("mergeStateStatus"),
-        "additions": n.get("additions", 0), "deletions": n.get("deletions", 0),
-        "author": {"login": (n.get("author") or {}).get("login")},
-        "labels": [{"name": l["name"]} for l in (n.get("labels") or {}).get("nodes", [])],
-        "latestReviews": [{"state": r["state"]}
-                          for r in (n.get("latestOpinionatedReviews") or {}).get("nodes", [])],
-        "files": [{"path": f["path"]} for f in (n.get("files") or {}).get("nodes", [])],
-        "statusCheckRollup": _status_rollup(n),
-    }
+def load_snapshot() -> dict:
+    if not SNAPSHOT.exists():
+        raise SystemExit(
+            f"{SNAPSHOT.name} not found. Generate it with queueboard:\n"
+            "  python -m queueboard.process\n"
+            "  python -m queueboard.dashboard_data all-open-PRs-*.json")
+    snap = json.loads(SNAPSHOT.read_text())
+    if not snap.get("prs"):
+        raise SystemExit("snapshot contains no PRs - refusing to write an empty board")
+    return snap
 
 
-def pull_prs() -> list[dict]:
-    nodes: list[dict] = []
-    cursor: str | None = None
+def fetch_basics() -> dict[int, dict]:
+    """createdAt and merge-conflict state, which the snapshot does not carry."""
+    out: dict[int, dict] = {}
+    cursor = None
     while True:
+        cmd = ["gh", "api", "graphql", "-f", f"query={BASICS_QUERY}"]
+        if cursor is not None:
+            cmd += ["-F", f"cursor={cursor}"]
         for attempt in range(5):
-            try:
-                data = _gql_page(cursor)
+            r = subprocess.run(cmd, capture_output=True, text=True)
+            if r.returncode == 0:
                 break
-            except RuntimeError as e:
-                if attempt == 4:
-                    raise SystemExit(f"could not fetch PRs from GitHub: {e}")
-                time.sleep(8)
-        conn = data["data"]["repository"]["pullRequests"]
-        nodes.extend(conn["nodes"])
-        if conn["pageInfo"]["hasNextPage"]:
-            cursor = conn["pageInfo"]["endCursor"]
-        else:
-            break
-    return [_transform(n) for n in nodes]
-
-
-def load_prs() -> list[dict]:
-    cache = HERE / "prs.json"
-    if cache.exists() and cache.read_text().strip():
-        prs = json.loads(cache.read_text())
-    else:
-        prs = pull_prs()
-    if not prs:
-        raise SystemExit("no PRs to render (empty prs.json) - refusing to write "
-                         "an empty board")
-    cache.write_text(json.dumps(prs, indent=1))
-    return prs
+            if attempt == 4:
+                raise SystemExit(f"could not fetch PR basics: {r.stderr.strip()[:200]}")
+            time.sleep(8)
+        conn = json.loads(r.stdout)["data"]["repository"]["pullRequests"]
+        for n in conn["nodes"]:
+            out[n["number"]] = n
+        if not conn["pageInfo"]["hasNextPage"]:
+            return out
+        cursor = conn["pageInfo"]["endCursor"]
 
 
 def load_verdicts() -> dict[int, dict]:
@@ -173,61 +137,62 @@ def load_verdicts() -> dict[int, dict]:
 
 
 # --- classification -------------------------------------------------------
+# Buckets, CI state and idle time are queueboard's, not ours. What stays here
+# is the FC-specific reading: whether a PR touches a statement file, and how
+# long it has been waiting.
 
 def ci_state(pr: dict) -> str:
-    build = [c for c in (pr.get("statusCheckRollup") or [])
-             if c.get("name") == "Build project"]
-    if not build:
-        return "none"
-    concl = (build[0].get("conclusion") or "").upper()
-    if concl == "SUCCESS":
-        return "green"
-    if concl in ("FAILURE", "CANCELLED", "TIMED_OUT"):
-        return "failing"
-    return "running"
+    return CI.get(_unwrap(pr.get("ci_status")), "none")
 
 
 def is_statement(pr: dict) -> bool:
-    for f in pr.get("files") or []:
-        p = f.get("path", "")
-        if p.startswith("FormalConjectures/") and any(d in p for d in STATEMENT_DIRS):
-            return True
-    return False
+    return any(p.startswith("FormalConjectures/") and any(d in p for d in STATEMENT_DIRS)
+               for p in pr.get("modified_files") or [])
 
 
 def approvals(pr: dict) -> int:
-    return sum(1 for r in (pr.get("latestReviews") or [])
-               if (r.get("state") or "").upper() == "APPROVED")
+    return len(pr.get("approvals") or [])
 
 
-def has_conflict(pr: dict) -> bool:
-    return (pr.get("mergeStateStatus") or "").upper() == "DIRTY"
+def has_conflict(pr: dict, basic: dict) -> bool:
+    return (basic.get("mergeStateStatus") or "").upper() == "DIRTY"
 
 
 def days_since(iso: str, now: datetime) -> int:
     return (now - datetime.fromisoformat(iso.replace("Z", "+00:00"))).days
 
 
-def classify(pr: dict) -> str:
-    labels = {l["name"].lower() for l in pr.get("labels") or []}
-    review = pr.get("reviewDecision")
-    ci = ci_state(pr)
-    if pr.get("isDraft") or "wip" in labels:
-        return "draft"
-    if review == "APPROVED":
+def queue_days(pr: dict) -> int | None:
+    """Time actually spent on the review queue, excluding spells where the ball
+    was in the author's court. None when queueboard could not reconstruct it."""
+    t = pr.get("total_queue_time") or {}
+    if t.get("status") != "valid" or not t.get("value_td"):
+        return None
+    return round(t["value_td"] / 86400)
+
+
+def idle_days(pr: dict) -> int | None:
+    """Days since the PR's status last changed."""
+    lsc = pr.get("last_status_change") or {}
+    if lsc.get("status") != "valid":
+        return None
+    d = lsc.get("delta") or {}
+    return round(d.get("months", 0) * 30 + d.get("days", 0) + d.get("hours", 0) / 24)
+
+
+def classify(pr: dict, approved: set[int], number: int) -> str:
+    if number in approved:
         return "approved"
-    if (review == "CHANGES_REQUESTED" or "awaiting-author" in labels
-            or ci == "failing" or has_conflict(pr)):
-        return "author"
-    return "review"
+    return BUCKET.get(_unwrap(pr.get("pr_status")), "draft")
+
 
 
 # --- audit join -----------------------------------------------------------
 
 def problem_numbers(pr: dict) -> list[int]:
     nums = set()
-    for f in pr.get("files") or []:
-        m = ERDOS_FILE_RE.search(f.get("path", ""))
+    for path in pr.get("modified_files") or []:
+        m = ERDOS_FILE_RE.search(path)
         if m:
             nums.add(int(m.group(1)))
     return sorted(nums)
@@ -283,7 +248,8 @@ def pr_top_status(audit: list[dict]) -> str | None:
     return None
 
 
-def build_record(pr: dict, verdicts: dict[int, dict], now: datetime) -> dict:
+def build_record(number: int, pr: dict, basic: dict, verdicts: dict[int, dict],
+                 approved: set[int], now: datetime) -> dict:
     audit = []
     for n in problem_numbers(pr):
         row = verdicts.get(n)
@@ -292,19 +258,26 @@ def build_record(pr: dict, verdicts: dict[int, dict], now: datetime) -> dict:
         audit.append({"n": n, "cls": cls, "status": STATUS_KEY[cls],
                       "note": note, "href": href})
     ci = ci_state(pr)
+    created = basic.get("createdAt")
+    # Prefer time on the queue; fall back to age when queueboard could not
+    # reconstruct the timeline (PRs synced with the reduced query).
+    waiting = queue_days(pr)
+    age = days_since(created, now) if created else (waiting or 0)
+    idle = idle_days(pr)
     return {
-        "n": pr["number"],
-        "title": pr["title"],
-        "author": (pr.get("author") or {}).get("login") or "ghost",
+        "n": number,
+        "title": pr.get("title") or "",
+        "author": pr.get("author") or "ghost",
         "kind": "statement" if is_statement(pr) else "infra",
-        "bucket": classify(pr),
+        "bucket": classify(pr, approved, number),
         "ci": ci,
-        "ciPending": (not pr.get("isDraft")) and ci == "none",
-        "conflict": has_conflict(pr),
-        "age": days_since(pr["createdAt"], now),
-        "idle": days_since(pr["updatedAt"], now),
+        "ciPending": (not pr.get("is_draft")) and ci == "none",
+        "conflict": has_conflict(pr, basic),
+        "age": age,
+        "waiting": waiting,
+        "idle": idle if idle is not None else age,
         "appr": approvals(pr),
-        "churn": (pr.get("additions", 0) or 0) + (pr.get("deletions", 0) or 0),
+        "churn": (pr.get("additions") or 0) + (pr.get("deletions") or 0),
         "audit": audit,
         "auditTop": pr_top_status(audit),
         "auditStatuses": sorted({a["status"] for a in audit}),
@@ -312,10 +285,14 @@ def build_record(pr: dict, verdicts: dict[int, dict], now: datetime) -> dict:
 
 
 def main() -> None:
-    prs = load_prs()
+    snap = load_snapshot()
+    basics = fetch_basics()
     verdicts = load_verdicts()
+    approved = set(snap.get("lists", {}).get("dashboards", {}).get("Approved") or [])
     now = datetime.now(timezone.utc)
-    records = [build_record(p, verdicts, now) for p in prs]
+    records = [build_record(int(num), pr, basics.get(int(num), {}), verdicts, approved, now)
+               for num, pr in snap["prs"].items()]
+    records.sort(key=lambda r: -(r["waiting"] if r["waiting"] is not None else r["age"]))
     meta = {
         "generated": now.strftime("%Y-%m-%d %H:%M UTC"),
         "repo": REPO, "hasAudit": bool(verdicts),
@@ -332,9 +309,10 @@ def main() -> None:
            .replace("__FRONTIER__", FRONTIER_URL))
     (HERE / "index.html").write_text(doc)
     review = [r for r in records if r["bucket"] == "review"]
+    longest = max((r["waiting"] or r["age"] for r in review), default=0)
     print(f"wrote index.html - {len(records)} PRs, {len(review)} ready for "
           f"review ({sum(1 for r in review if r['kind'] == 'statement')} "
-          f"statements), oldest waiting {max((r['age'] for r in review), default=0)}d")
+          f"statements), longest waiting {longest}d")
 
 
 TEMPLATE = r"""<!doctype html>
@@ -571,8 +549,8 @@ const AUDIT_DOT = {signed:'gold', unconditional:'moss', conditional:'brass', fla
 const CARET = '<svg width="9" height="9" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const FID_TITLE = {flagged:'Flagged unfaithful', conditional:'Conditional — rests on an assumption', signed:'Signed faithful', unconditional:'Machine-checked unconditional', unaudited:'Not yet audited'};
 const BUCKETS = [['approved','Approved, ready to merge'],['review','Ready for review'],['author','Waiting on the author'],['draft','Draft / work in progress']];
-const COLS = [['n','PR'],['title','title'],['author','author'],['kind','kind'],['audit','audit'],['age','open'],['idle','idle'],['ci','CI'],['appr','&check;'],['churn','&pm;']];
-const SORTABLE = {n:1, author:1, audit:1, age:1, idle:1, ci:1, appr:1, churn:1};
+const COLS = [['n','PR'],['title','title'],['author','author'],['kind','kind'],['audit','audit'],['age','open'],['waiting','waiting'],['idle','idle'],['ci','CI'],['appr','&check;'],['churn','&pm;']];
+const SORTABLE = {n:1, author:1, audit:1, age:1, waiting:1, idle:1, ci:1, appr:1, churn:1};
 const FACETS = [
   {group:'audit', label:'Audit', opts:['signed','unconditional','conditional','flagged','unaudited']},
   {group:'kind', label:'Kind', opts:['statement','infra']},
@@ -619,7 +597,9 @@ function rowHtml(r){
     + '<td class="who">'+esc(r.author)+'</td>'
     + '<td><span class="tag tag--'+r.kind+'">'+r.kind+'</span></td>'
     + auditCell(r)
-    + '<td class="mono">'+r.age+'d</td><td class="mono">'+r.idle+'d</td>'
+    + '<td class="mono">'+r.age+'d</td>'
+    + '<td class="mono" title="time actually spent on the review queue">'+(r.waiting == null ? '<span class="dash">&mdash;</span>' : r.waiting+'d')+'</td>'
+    + '<td class="mono">'+r.idle+'d</td>'
     + '<td>'+ciDot(r)+'</td><td class="mono appr-c">'+appr+'</td><td class="mono">'+r.churn+'</td>'
     + '</tr>';
 }
@@ -628,6 +608,7 @@ const AUDIT_RANK = {'ab--discrepancy':0, 'ab--conditional':1, 'ab--variant':1, '
 function auditRank(r){ return r.auditTop != null ? AUDIT_RANK[r.auditTop] : (r.audit.length ? 4 : 5); }
 function sortVal(r, col){
   if (col === 'audit') return auditRank(r);
+  if (col === 'waiting') return r.waiting == null ? -1 : r.waiting;
   if (col === 'ci'){ return {failing:0, running:1, none:2, green:3}[r.ci]; }
   return r[col];
 }
@@ -648,7 +629,8 @@ function emptyState(msg){ return '<div class="empty">'+(msg||'No pull requests m
 function renderQueue(recs){
   const out = BUCKETS.map(([b, title]) => {
     const g = recs.filter(r => r.bucket === b); if (!g.length) return '';
-    const sorted = b === 'review' ? g.slice().sort((a, b2) => b2.age - a.age) : g.slice().sort((a, b2) => b2.idle - a.idle);
+    const key = r => r.waiting != null ? r.waiting : r.age;
+    const sorted = b === 'review' ? g.slice().sort((a, b2) => key(b2) - key(a)) : g.slice().sort((a, b2) => b2.idle - a.idle);
     return '<section><div class="sec-h"><h2>'+title+'</h2><span class="n">'+g.length+'</span></div>'+tableHtml(sorted, false)+'</section>';
   }).join('');
   return out || emptyState();

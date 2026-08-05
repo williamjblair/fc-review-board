@@ -5,3 +5,9 @@ index.html
 _site/
 err.txt
 __pycache__/
+
+# queueboard working tree and the snapshot it produces (regenerated each run)
+.queueboard/
+snapshot.json
+prs.json
+verdicts.json
