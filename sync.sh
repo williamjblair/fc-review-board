@@ -7,8 +7,9 @@
 #   basic_pr_info  (~1 rate-limit point each) for every open PR. Carries labels,
 #                  CI rollup, files, diff size, reviews: everything the board
 #                  needs except timings.
-#   pr_info        (~5 points each) for every open PR. This one walks the
-#                  timeline, which is what makes `total_queue_time` possible.
+#   pr_info        (~5 points each) for the review queue and approved PRs
+#                  only. This one walks the timeline, which is what makes
+#                  `total_queue_time` possible, and is the expensive half.
 #
 # A full cold run costs roughly 900 points and a few minutes, so there is no
 # cache and no incremental sync to get wrong. Everything is refetched each run.
@@ -161,11 +162,13 @@ build () {
 # A first pass tells us who is on the review queue; only those need timings.
 echo "==> classifying"
 build
-# Every open PR gets a timeline. Restricting this to the review queue left the
-# waiting column empty for the author and draft buckets, which is half the
-# board. In series that would have been unaffordable; in parallel it is seconds.
-cp prs.txt queue.txt
-echo "    $(wc -l < queue.txt | tr -d ' ') PRs need timings"
+# Timelines only for the rows whose waiting time anyone reads: the review queue
+# and approved PRs. The author and draft buckets sort by idle, so paying ~850
+# extra points an hour to fill in a column nobody sorts on just crowds the rate
+# budget until a run has to skip timings altogether.
+jq -r '(.lists.dashboards.Queue // []) + (.lists.dashboards.Approved // []) | unique | .[]' \
+  api/snapshot.json > queue.txt || true
+echo "    $(wc -l < queue.txt | tr -d ' ') need timings (queue + approved)"
 
 # --- pass 2: timelines for the rows people actually read -------------------------------
 echo "==> timelines (rate budget: $(remaining))"
