@@ -61,7 +61,8 @@ BOARD_REPO_URL = "https://github.com/williamjblair/fc-review-board"
 #
 # Two fields queueboard does not carry are fetched separately: createdAt, and
 # whether the PR has a merge conflict. mergeStateStatus is computed on demand
-# by GitHub, so this stays on modest pages - 50 works, 100 502s.
+# by GitHub, so this stays on small pages: 50 returns truncated responses
+# under load and 100 502s outright.
 
 _OWNER, _NAME = REPO.split("/")
 SNAPSHOT = HERE / "snapshot.json"
@@ -69,7 +70,7 @@ SNAPSHOT = HERE / "snapshot.json"
 BASICS_QUERY = """
 query($cursor: String) {
   repository(owner: "%s", name: "%s") {
-    pullRequests(states: OPEN, first: 50, after: $cursor) {
+    pullRequests(states: OPEN, first: 25, after: $cursor) {
       pageInfo { hasNextPage endCursor }
       nodes { number createdAt mergeStateStatus }
     }
@@ -107,14 +108,22 @@ def fetch_basics() -> dict[int, dict]:
         cmd = ["gh", "api", "graphql", "-f", f"query={BASICS_QUERY}"]
         if cursor is not None:
             cmd += ["-F", f"cursor={cursor}"]
+        # A zero exit code is not enough: GitHub sometimes answers with a
+        # truncated body, which only shows up when the JSON fails to parse.
+        # Retry on that too rather than dying on the first bad page.
+        conn = None
         for attempt in range(5):
             r = subprocess.run(cmd, capture_output=True, text=True)
             if r.returncode == 0:
-                break
+                try:
+                    conn = json.loads(r.stdout)["data"]["repository"]["pullRequests"]
+                    break
+                except (ValueError, KeyError, TypeError):
+                    pass
             if attempt == 4:
-                raise SystemExit(f"could not fetch PR basics: {r.stderr.strip()[:200]}")
+                detail = r.stderr.strip()[:200] or "malformed response"
+                raise SystemExit(f"could not fetch PR basics: {detail}")
             time.sleep(8)
-        conn = json.loads(r.stdout)["data"]["repository"]["pullRequests"]
         for n in conn["nodes"]:
             out[n["number"]] = n
         if not conn["pageInfo"]["hasNextPage"]:
