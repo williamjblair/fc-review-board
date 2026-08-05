@@ -39,11 +39,41 @@ fi
 
 # queueboard hardcodes mathlib's default branch and PR URLs. Three constants;
 # patched here rather than forked so the clone stays a clean upstream checkout.
+#
+# Each substitution is checked. If upstream ever renames or parameterises one
+# of these, the pattern stops matching, and a silent no-op would leave the
+# board looking for a branch this repository does not have - a green run with
+# an empty review queue. Better to fail here and keep the last good deploy.
+repoint () {  # description, pattern, replacement, file...
+  local what="$1" from="$2" to="$3"; shift 3
+  local f hits total=0
+  for f in "$@"; do
+    hits=$(grep -c -- "$from" "$f" || true)
+    total=$(( total + hits ))
+    [ "$hits" -gt 0 ] && sed -i.bak "s|$from|$to|g" "$f"
+  done
+  if [ "$total" -eq 0 ]; then
+    echo "error: could not repoint $what." >&2
+    echo "  Nothing in queueboard-core matched '$from'." >&2
+    echo "  Upstream has probably changed; the patch in sync.sh needs updating." >&2
+    exit 1
+  fi
+  echo "    $what: $total occurrence(s)"
+}
+
 echo "==> repointing queueboard at $REPO ($BASE)"
-sed -i.bak "s/\"master\"/\"$BASE\"/g" \
+repoint "default branch" '"master"' "\"$BASE\"" \
   "$CORE/src/queueboard/compute_dashboard_prs.py" "$CORE/src/queueboard/dashboard.py"
-sed -i.bak "s|leanprover-community/mathlib4|$REPO|g" \
+repoint "repository URLs" "leanprover-community/mathlib4" "$REPO" \
   "$CORE/src/queueboard/compute_dashboard_prs.py" "$CORE/src/queueboard/dashboard_data.py"
+
+# A patched tree that still mentions mathlib4 in the URL builders means a
+# substitution half-applied; catch that too.
+if grep -rq "leanprover-community/mathlib4" \
+     "$CORE/src/queueboard/dashboard_data.py" 2>/dev/null; then
+  echo "error: dashboard_data.py still points at mathlib4 after patching." >&2
+  exit 1
+fi
 
 cd "$WORK"
 : > stubborn_prs.txt
