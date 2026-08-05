@@ -30,11 +30,14 @@ jobs:
 
       - uses: astral-sh/setup-uv@v5
 
+      # No audit feed by default. Set a VERDICTS_URL repository variable to
+      # point at one and the fidelity column appears; without it the board
+      # depends on nothing but GitHub.
       - name: Fetch audit feed
+        if: vars.VERDICTS_URL != ''
         env:
           VERDICTS_URL: ${{ vars.VERDICTS_URL }}
-        run: |
-          curl -sfL "${VERDICTS_URL:-https://erdos.constellate.science/verdicts.json}" -o verdicts.json
+        run: curl -sfL "$VERDICTS_URL" -o verdicts.json
 
       # PR state and timings come from queueboard, the tool mathlib's review
       # dashboard is built on, so the fetching and the "what counts as awaiting

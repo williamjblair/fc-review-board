@@ -47,14 +47,17 @@ COLLECTION_LABELS = {
     "mathoverflow": "MathOverflow",
 }
 
-DEFAULT_VERDICTS_URL = "https://erdos.constellate.science/verdicts.json"
-FINDING_URL = "https://erdos.constellate.science/finding.html?n={n}"
+VERDICTS_URL = os.environ.get("VERDICTS_URL", "")
+# Where a per-problem finding lives, for the audit chips. Derived from the feed
+# so nothing is hardcoded to one provider.
+AUDIT_SITE = VERDICTS_URL.rsplit("/", 1)[0] if VERDICTS_URL else ""
+FINDING_URL = (AUDIT_SITE + "/finding.html?n={n}") if AUDIT_SITE else "{n}"
 ERDOS_URL = "https://www.erdosproblems.com/{n}"
 ERDOS_FILE_RE = re.compile(r"ErdosProblems/(\d+)\.lean")
 
-# Connective links (not branding: data provenance + how-it-works pointers).
-FRONTIER_URL = "https://erdos.constellate.science"
-METHOD_URL = "https://erdos.constellate.science/method.html"
+# Provenance pointers, present only when an audit feed is configured.
+FRONTIER_URL = AUDIT_SITE
+METHOD_URL = (AUDIT_SITE + "/method.html") if AUDIT_SITE else ""
 FC_REPO_URL = f"https://github.com/{REPO}"
 FC_SITE_URL = "https://google-deepmind.github.io/formal-conjectures"
 BOARD_REPO_URL = "https://github.com/williamjblair/fc-review-board"
@@ -151,12 +154,14 @@ def load_verdicts() -> dict[int, dict]:
     """Index the audit feed by problem number. Prefer a local verdicts.json
     (the Action curls it, tests drop it in); otherwise fetch the live feed."""
     cache = HERE / "verdicts.json"
+    url = VERDICTS_URL
     if cache.exists():
         data = json.loads(cache.read_text())
-    else:
-        url = os.environ.get("VERDICTS_URL", DEFAULT_VERDICTS_URL)
+    elif url:
         with urllib.request.urlopen(url, timeout=60) as r:  # noqa: S310
             data = json.loads(r.read().decode())
+    else:
+        return {}
     rows = data.get("rows", []) if isinstance(data, dict) else data
     return {r["problem"]: r for r in rows if "problem" in r}
 
@@ -345,6 +350,14 @@ def main() -> None:
            .replace("__BOARD_REPO__", BOARD_REPO_URL)
            .replace("__METHOD__", METHOD_URL)
            .replace("__FRONTIER__", FRONTIER_URL))
+    if not verdicts:
+        doc = re.sub(r"\s*<p><strong>The audit column</strong>.*?</p>", "", doc, flags=re.S)
+        doc = re.sub(r"\s*<p>PR data via the GitHub API\..*?</p>",
+                     "\n  <p>PR data via the GitHub API. PR state, timings and CI classification "
+                     "via <a href=\"https://github.com/leanprover-community/queueboard-core\">"
+                     "queueboard</a>, the tool mathlib's review dashboard is built on. "
+                     "An independent tool, not affiliated with the formal-conjectures "
+                     "maintainers.</p>", doc, flags=re.S)
     (HERE / "index.html").write_text(doc)
     review = [r for r in records if r["bucket"] == "review"]
     longest = max((r["waiting"] or r["age"] for r in review), default=0)

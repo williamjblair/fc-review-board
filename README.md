@@ -41,15 +41,21 @@ work in an area they know.
 The `ams-*` subject labels would be the better axis, but exactly one open PR
 carries one: they get applied to issues rather than pull requests.
 
-### The audit column
+### The audit column (optional, off by default)
 
-For PRs that touch `FormalConjectures/ErdosProblems/<N>.lean`, the board joins
-each problem to the public [Erdős fidelity audit](https://erdos.constellate.science)
-and shows, per problem, whether the linked proof was found unconditional, rests
-on a named assumption (conditional), or carries a signed verdict from a named
-reviewer. It reports a fact next to the PR; the merge decision stays the
-maintainer's. A PR touching many problems is summarised as a count breakdown
-rather than a long list of badges.
+Set a `VERDICTS_URL` repository variable pointing at a `verdicts.json` and an
+extra column appears, showing per problem whether a linked proof was found
+unconditional, rests on a named assumption, or carries a signed verdict from a
+named reviewer. It reports a fact next to the PR; the merge decision stays the
+maintainer's.
+
+With no such variable the board fetches nothing but GitHub, and the column, its
+filter and the Fidelity view are not rendered. That is the default because a
+review dashboard should not depend on a third-party service to draw a column,
+and because most of what it would report is Erdős-specific: of 3503 statements
+in the repository, 295 carry a `formal_proof` link at all, and 243 of those are
+Erdős problems.
+
 
 ## How it works
 
@@ -87,7 +93,6 @@ GitHub Pages.
 Needs `gh` (authenticated), `jq` and [`uv`](https://docs.astral.sh/uv/).
 
 ```bash
-curl -sfL https://erdos.constellate.science/verdicts.json -o verdicts.json
 ./sync.sh                      # writes snapshot.json (a few minutes)
 python3 generate.py            # writes index.html
 python3 -m http.server         # then open http://localhost:8000
@@ -108,5 +113,4 @@ empty feed to drop the audit column entirely.
 PR state and queue timings come from
 [queueboard](https://github.com/leanprover-community/queueboard-core), by Johan
 Commelin, Michael Rothgang and Bryan Gin-ge Chen, used unmodified apart from
-three repointed constants. Problem-audit data comes from the
-[Erdős frontier](https://erdos.constellate.science) snapshot.
+three repointed constants.
