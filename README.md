@@ -85,8 +85,10 @@ several hundred half-second round trips in series is most of a slow run. A full
 run is around 600 of the 5000 hourly points and about a minute. If the budget will not cover the timings it skips
 them and the board still builds, with those PRs falling back to age.
 
-A GitHub Action (`.github/workflows/board.yml`) does this hourly and deploys to
-GitHub Pages.
+A GitHub Action (`.github/workflows/board.yml`) does this on a schedule and
+deploys to GitHub Pages. The cron asks for hourly; GitHub spaces scheduled runs
+out under load, so in practice it lands every two to three hours, and Pages
+takes several more minutes to serve the result.
 
 ## Run it locally
 

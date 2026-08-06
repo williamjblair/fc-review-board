@@ -187,5 +187,16 @@ fi
 
 echo "==> rebuilding with timings"
 build
+
+# createdAt and mergeStateStatus are already in the per-PR data queueboard
+# fetched, but its snapshot does not carry them. Pull them out here rather than
+# asking GitHub for them a second time: that second pass was 85 of the run's
+# 170 seconds, for fields already sitting on disk.
+jq -s 'map(.data.repository.pullRequest
+           | select(. != null)
+           | {(.number|tostring): {createdAt, mergeStateStatus}})
+       | add' data/*/pr_info.json data/*/basic_pr_info.json 2>/dev/null \
+  > "${QB_OUT:-$OLDPWD}/pr_basics.json"
+echo "==> wrote pr_basics.json ($(jq 'length' "${QB_OUT:-$OLDPWD}/pr_basics.json") PRs)"
 cp api/snapshot.json "${QB_OUT:-$OLDPWD}/snapshot.json"
 echo "==> wrote snapshot.json ($(jq '.prs | length' api/snapshot.json) PRs, budget left $(remaining))"

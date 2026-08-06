@@ -24,7 +24,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import subprocess
 import time
 import urllib.request
 from datetime import datetime, timezone
@@ -79,27 +78,8 @@ BOARD_REPO_URL = "https://github.com/williamjblair/fc-review-board"
 # by GitHub, so this stays on small pages: 50 returns truncated responses
 # under load and 100 502s outright.
 
-_OWNER, _NAME = REPO.split("/")
 SNAPSHOT = HERE / "snapshot.json"
-
-BASICS_QUERY = """
-query($cursor: String) {
-  repository(owner: "%s", name: "%s") {
-    pullRequests(states: OPEN, first: 25, after: $cursor) {
-      pageInfo { hasNextPage endCursor }
-      nodes {
-        number createdAt mergeStateStatus
-        commits(last: 1) { nodes { commit { statusCheckRollup {
-          contexts(first: 1) { nodes { ... on CheckRun { completedAt } } } } } } }
-      }
-    }
-  }
-}
-""" % (_OWNER, _NAME)
-
-# queueboard's status vocabulary -> this board's buckets.
-BUCKET = {"AwaitingReview": "review", "AwaitingAuthor": "author", "NotReady": "draft"}
-CI = {"pass": "green", "fail": "failing"}
+BASICS = HERE / "pr_basics.json"
 
 
 def _unwrap(v):
@@ -107,47 +87,28 @@ def _unwrap(v):
     return v.get("__value__") if isinstance(v, dict) and "__value__" in v else v
 
 
+BUCKET = {"AwaitingReview": "review", "AwaitingAuthor": "author", "NotReady": "draft"}
+CI = {"pass": "green", "fail": "failing"}
+
+
 def load_snapshot() -> dict:
     if not SNAPSHOT.exists():
-        raise SystemExit(
-            f"{SNAPSHOT.name} not found. Generate it with queueboard:\n"
-            "  python -m queueboard.process\n"
-            "  python -m queueboard.dashboard_data all-open-PRs-*.json")
+        raise SystemExit(f"{SNAPSHOT.name} not found. Run ./sync.sh first.")
     snap = json.loads(SNAPSHOT.read_text())
     if not snap.get("prs"):
         raise SystemExit("snapshot contains no PRs - refusing to write an empty board")
     return snap
 
 
-def fetch_basics() -> dict[int, dict]:
-    """createdAt and merge-conflict state, which the snapshot does not carry."""
-    out: dict[int, dict] = {}
-    cursor = None
-    while True:
-        cmd = ["gh", "api", "graphql", "-f", f"query={BASICS_QUERY}"]
-        if cursor is not None:
-            cmd += ["-F", f"cursor={cursor}"]
-        # A zero exit code is not enough: GitHub sometimes answers with a
-        # truncated body, which only shows up when the JSON fails to parse.
-        # Retry on that too rather than dying on the first bad page.
-        conn = None
-        for attempt in range(5):
-            r = subprocess.run(cmd, capture_output=True, text=True)
-            if r.returncode == 0:
-                try:
-                    conn = json.loads(r.stdout)["data"]["repository"]["pullRequests"]
-                    break
-                except (ValueError, KeyError, TypeError):
-                    pass
-            if attempt == 4:
-                detail = r.stderr.strip()[:200] or "malformed response"
-                raise SystemExit(f"could not fetch PR basics: {detail}")
-            time.sleep(8)
-        for n in conn["nodes"]:
-            out[n["number"]] = n
-        if not conn["pageInfo"]["hasNextPage"]:
-            return out
-        cursor = conn["pageInfo"]["endCursor"]
+def load_basics() -> dict[int, dict]:
+    """`createdAt` and merge-conflict state, which the snapshot does not carry.
+
+    sync.sh lifts these out of the per-PR data queueboard already downloaded. It
+    used to be a second pass over the GitHub API here, which cost more than
+    everything else in this script put together."""
+    if not BASICS.exists():
+        return {}
+    return {int(k): v for k, v in json.loads(BASICS.read_text()).items()}
 
 
 def load_verdicts() -> dict[int, dict]:
@@ -329,7 +290,7 @@ def build_record(number: int, pr: dict, basic: dict, verdicts: dict[int, dict],
 
 def main() -> None:
     snap = load_snapshot()
-    basics = fetch_basics()
+    basics = load_basics()
     verdicts = load_verdicts()
     approved = set(snap.get("lists", {}).get("dashboards", {}).get("Approved") or [])
     now = datetime.now(timezone.utc)
@@ -561,7 +522,7 @@ footer a:hover { color: var(--accent); border-color: var(--accent); }
 <body><div class="wrap">
 <header>
   <h1>formal-conjectures <span class="h1-sub">&middot; review queue</span></h1>
-  <div class="meta">Updated __STAMP__ &middot; refreshes hourly<span class="sep">|</span><a href="__FC_REPO__/pulls">pull requests</a><span class="sep">|</span><a href="__FC_SITE__">formal-conjectures</a><span class="sep">|</span><a href="__BOARD_REPO__">source</a></div>
+  <div class="meta">Updated __STAMP__<span class="sep">|</span><a href="__FC_REPO__/pulls">pull requests</a><span class="sep">|</span><a href="__FC_SITE__">formal-conjectures</a><span class="sep">|</span><a href="__BOARD_REPO__">source</a></div>
 </header>
 <div id="strip" class="strip"></div>
 <div class="controls">

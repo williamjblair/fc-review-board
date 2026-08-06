@@ -2,7 +2,9 @@ name: Build review board
 
 on:
   schedule:
-    - cron: "0 * * * *"   # hourly
+    # Asked for hourly. GitHub spaces scheduled runs out under load, so in
+    # practice this fires every two to three hours.
+    - cron: "0 * * * *"
   workflow_dispatch:
   push:
     branches: [main]
@@ -45,8 +47,8 @@ jobs:
       # it, repoints three mathlib-specific constants, and writes snapshot.json.
       #
       # Deliberately stateless: no cached PR data, so nothing can go stale or
-      # need repairing. A cold run costs ~1100 of the 5000 hourly rate-limit
-      # points and a few minutes, which an hourly schedule absorbs easily.
+      # need repairing. A cold run costs about 600 of the 5000 hourly
+      # rate-limit points and roughly a minute.
       - name: Sync PR state
         env:
           GH_TOKEN: ${{ github.token }}
@@ -55,10 +57,8 @@ jobs:
       # generate.py reads snapshot.json plus the audit feed and writes
       # index.html. It exits non-zero if the snapshot is missing or empty, so a
       # bad run fails rather than deploying an empty board; the last good
-      # deploy stays and the hourly cron retries.
+      # deploy stays and the next scheduled run retries.
       - name: Generate board
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           python3 generate.py
           mkdir -p _site
