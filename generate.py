@@ -897,8 +897,10 @@ function updateFilterUI(){
 }
 
 function buildToolbar(){
-  tabsEl.innerHTML = [['queue','Queue'],['all','All PRs'],['fidelity','Fidelity']]
-    .filter(v => v[0] !== 'fidelity' || META.hasAudit)
+  tabsEl.innerHTML = [['queue','Queue'],['all','All PRs'],['pick','Pick one up'],['problems','Problems'],['fidelity','Fidelity']]
+    .filter(v => (v[0] !== 'fidelity' || META.hasAudit)
+              && (v[0] !== 'pick' || META.hasIssues)
+              && (v[0] !== 'problems' || META.hasProblems))
     .map(([k, l]) => '<button class="tab" role="tab" data-view="'+k+'">'+l+'</button>').join('');
   tabsEl.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => { state.view = b.dataset.view; syncUrl(); updateTabs(); render(); }));
   const groups = FACETS.filter(f => f.group !== 'audit' || META.hasAudit);
