@@ -219,9 +219,10 @@ query($endCursor: String) {
   repository(owner: "google-deepmind", name: "formal-conjectures") {
     issues(states: OPEN, first: 100, after: $endCursor) {
       pageInfo { hasNextPage endCursor }
-      nodes { number title createdAt labels(first: 20) { nodes { name } } }
+      nodes { number title createdAt body labels(first: 20) { nodes { name } } }
     } }
 }' | jq '[.[].data.repository.issues.nodes[] | {number, title, createdAt,
+          upForGrabs: ((.body // "") | test("\\[x\\] *This issue is up for grabs")),
           labels: [.labels.nodes[]]}]' > "${QB_OUT:-$OLDPWD}/issues.json"
 echo "==> wrote issues.json ($(jq 'length' "${QB_OUT:-$OLDPWD}/issues.json") issues)"
 

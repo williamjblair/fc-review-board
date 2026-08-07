@@ -135,7 +135,10 @@ def load_issues(claimed: dict[int, list[int]] | None = None,
             "n": it["number"],
             "title": it["title"],
             "labels": labels,
-            "ready": "new conjecture" in labels and "needs-prerequisites" not in labels,
+            # The template has the author tick either "I plan on working on this" or "up for
+            # grabs". Going by labels alone lists conjectures their author has claimed.
+            "ready": ("new conjecture" in labels and "needs-prerequisites" not in labels
+                      and it.get("upForGrabs", True)),
             "ams": next((l.split(":")[0].replace("ams-", "AMS ").strip()
                          for l in labels if l.startswith("ams-")), ""),
             "age": days_since(it["createdAt"], datetime.now(timezone.utc)),
