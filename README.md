@@ -23,14 +23,33 @@ been ready for review has no queue time to report.
 
 Each row carries CI status, approval count, size, and small flags:
 
-- **CI *n* old** when the checks last ran a month or more ago. A passing tick is
-  only as good as the `main` it ran against, and 111 of the open PRs currently
-  import a module that was deleted in July while still showing green. The flag
-  reports the age and leaves the judgement to the reviewer.
+- **needs rebase** when a branch's checks predate a breaking change on `main`,
+  naming which one. Two so far: `FormalConjectures.Util.ProblemImports` was
+  deleted in July, and the `openClassical` linter was switched on in August. 110
+  of the open PRs predate one of them and still show a passing tick, because it
+  was earned against a `main` that has moved. Not a mark against the PR: of six
+  sampled and rebuilt, three needed only the import swap, two also needed
+  `open Classical` dropped, and one had real type errors.
+- **CI *n* old** when the checks last ran a month or more ago, for the branches
+  that predate nothing in particular.
+- **already on main?** when every file a PR adds is already on the base branch,
+  so the work may have landed another way. A prompt rather than a verdict: the
+  data cannot tell an added file from one that was only appended to. It found
+  #4071, #4072 and #4285.
 - **the assignee**, when a PR has one. Sparse, because people rarely set one,
   which is the thing worth changing if several people start reviewing at once.
 - merge conflicts, and PRs whose CI has not run at all (usually waiting on a
   maintainer to approve the workflow for a first-time contributor).
+
+Besides the queue there is a **Pick one up** view: the conjecture issues with no
+missing prerequisites, oldest first, split into the ones nothing has started and
+the ones an open pull request already claims. 96 of 540 are already claimed, and
+nothing else surfaces that, since the site knows what problems exist and GitHub
+knows what is in flight but nothing joins them.
+
+There is deliberately no view of the problems themselves. The repository's own
+site does that better, with an AMS-subject matrix and growth over time. This
+board is about what is in flight.
 
 Filters cover the source collection (Erdős, OEIS, Wikipedia, arXiv, papers and
 the rest), whether a PR is a statement or infrastructure, CI state, and the

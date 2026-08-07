@@ -54,7 +54,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: ./sync.sh
 
-      # generate.py reads snapshot.json plus the audit feed and writes
+      # generate.py reads snapshot.json, the issue list, the base branch's file
+      # list and the audit feed, and writes
       # index.html. It exits non-zero if the snapshot is missing or empty, so a
       # bad run fails rather than deploying an empty board; the last good
       # deploy stays and the next scheduled run retries.
