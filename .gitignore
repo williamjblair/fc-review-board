@@ -12,3 +12,5 @@ snapshot.json
 prs.json
 verdicts.json
 pr_basics.json
+issues.json
+base_paths.txt

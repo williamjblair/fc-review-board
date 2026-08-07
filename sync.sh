@@ -192,11 +192,38 @@ build
 # fetched, but its snapshot does not carry them. Pull them out here rather than
 # asking GitHub for them a second time: that second pass was 85 of the run's
 # 170 seconds, for fields already sitting on disk.
+# `headDate` only exists in the full pr_info records, so the "predates a breaking change"
+# flag covers the review queue and approved PRs, which is where it is read. `addedFiles`
+# are the ones with no deletions, the closest thing to "added" this data has.
 jq -s 'map(.data.repository.pullRequest
            | select(. != null)
-           | {(.number|tostring): {createdAt, mergeStateStatus}})
+           | {(.number|tostring): {
+               createdAt, mergeStateStatus,
+               headDate: (.commits.nodes[0].commit.committedDate // null),
+               addedFiles: [(.files.nodes // [])[] | select(.deletions == 0) | .path]}})
        | add' data/*/pr_info.json data/*/basic_pr_info.json 2>/dev/null \
   > "${QB_OUT:-$OLDPWD}/pr_basics.json"
 echo "==> wrote pr_basics.json ($(jq 'length' "${QB_OUT:-$OLDPWD}/pr_basics.json") PRs)"
+# Every path on the base branch, so the board can tell when a pull request only touches
+# files that already exist there. One request.
+echo "==> listing paths on $BASE"
+gh api "repos/$REPO/git/trees/$BASE?recursive=1" \
+  --jq '.tree[] | select(.type=="blob") | .path' > "${QB_OUT:-$OLDPWD}/base_paths.txt"
+echo "==> wrote base_paths.txt ($(wc -l < "${QB_OUT:-$OLDPWD}/base_paths.txt" | tr -d ' ') paths)"
+
+# Open issues, for the "pick one up" view. One cheap paginated query; the board treats a
+# missing file as "no issue view" rather than an error.
+echo "==> listing open issues"
+gh api graphql --paginate --slurp -f query='
+query($endCursor: String) {
+  repository(owner: "google-deepmind", name: "formal-conjectures") {
+    issues(states: OPEN, first: 100, after: $endCursor) {
+      pageInfo { hasNextPage endCursor }
+      nodes { number title createdAt labels(first: 20) { nodes { name } } }
+    } }
+}' | jq '[.[].data.repository.issues.nodes[] | {number, title, createdAt,
+          labels: [.labels.nodes[]]}]' > "${QB_OUT:-$OLDPWD}/issues.json"
+echo "==> wrote issues.json ($(jq 'length' "${QB_OUT:-$OLDPWD}/issues.json") issues)"
+
 cp api/snapshot.json "${QB_OUT:-$OLDPWD}/snapshot.json"
 echo "==> wrote snapshot.json ($(jq '.prs | length' api/snapshot.json) PRs, budget left $(remaining))"

@@ -31,6 +31,7 @@ from pathlib import Path
 
 HERE = Path(__file__).parent
 REPO = "google-deepmind/formal-conjectures"
+BASE = "main"
 STATEMENT_DIRS = ("ErdosProblems/", "Paper/", "Arxiv/", "Books/", "Wikipedia/",
                   "OEIS/", "OptimizationConstants/", "GreensOpenProblems/")
 
@@ -111,6 +112,40 @@ def load_basics() -> dict[int, dict]:
     return {int(k): v for k, v in json.loads(BASICS.read_text()).items()}
 
 
+ISSUES = HERE / "issues.json"
+
+
+BASE_PATHS = HERE / "base_paths.txt"
+
+
+def main_paths() -> set[str]:
+    """Every path on the base branch, written by sync.sh. Absent is fine: the supersession
+    prompt just does not appear."""
+    if not BASE_PATHS.exists():
+        return set()
+    return set(BASE_PATHS.read_text().split())
+
+
+def load_issues() -> list[dict]:
+    """Open issues, for the picking-something-up view. Written by sync.sh; absent is fine,
+    the view just does not appear."""
+    if not ISSUES.exists() or not ISSUES.read_text().strip():
+        return []
+    out = []
+    for it in json.loads(ISSUES.read_text()):
+        labels = [l["name"] for l in it.get("labels") or []]
+        out.append({
+            "n": it["number"],
+            "title": it["title"],
+            "labels": labels,
+            "ready": "new conjecture" in labels and "needs-prerequisites" not in labels,
+            "ams": next((l.split(":")[0].replace("ams-", "AMS ").strip()
+                         for l in labels if l.startswith("ams-")), ""),
+            "age": days_since(it["createdAt"], datetime.now(timezone.utc)),
+        })
+    return out
+
+
 def load_verdicts() -> dict[int, dict]:
     """Index the audit feed by problem number. Prefer a local verdicts.json
     (the Action curls it, tests drop it in); otherwise fetch the live feed."""
@@ -134,6 +169,18 @@ def load_verdicts() -> dict[int, dict]:
 
 def ci_state(pr: dict) -> str:
     return CI.get(_unwrap(pr.get("ci_status")), "none")
+
+
+def maybe_superseded(basic: dict, main_paths: set[str]) -> bool:
+    """Every file this PR adds is already on the base branch, so the work may have landed
+    another way.
+
+    A prompt, not a verdict. "Adds" here means "no deletions", which is as close as the data
+    gets; a PR that only appends to an existing file looks the same. The file cap keeps out
+    branches with an ancient base, which report hundreds of files and would otherwise all
+    match."""
+    added = basic.get("addedFiles") or []
+    return 0 < len(added) <= 5 and all(f in main_paths for f in added)
 
 
 def is_statement(pr: dict) -> bool:
@@ -270,7 +317,7 @@ def pr_top_status(audit: list[dict]) -> str | None:
 
 
 def build_record(number: int, pr: dict, basic: dict, verdicts: dict[int, dict],
-                 approved: set[int], now: datetime) -> dict:
+                 approved: set[int], now: datetime, on_main: set[str]) -> dict:
     audit = []
     for n in problem_numbers(pr):
         row = verdicts.get(n)
@@ -302,7 +349,8 @@ def build_record(number: int, pr: dict, basic: dict, verdicts: dict[int, dict],
         "appr": approvals(pr),
         "who": sorted(pr.get("assignees") or []),
         "ciAge": (days_since(ran, now) if (ran := ci_ran_at(basic)) else None),
-        "staleWhy": stale_reason(ci_ran_at(basic)) or "",
+        "staleWhy": stale_reason(basic.get("headDate")) or "",
+        "onMain": maybe_superseded(basic, on_main),
         "churn": (pr.get("additions") or 0) + (pr.get("deletions") or 0),
         "audit": audit,
         "auditTop": pr_top_status(audit),
@@ -316,16 +364,20 @@ def main() -> None:
     verdicts = load_verdicts()
     approved = set(snap.get("lists", {}).get("dashboards", {}).get("Approved") or [])
     now = datetime.now(timezone.utc)
-    records = [build_record(int(num), pr, basics.get(int(num), {}), verdicts, approved, now)
+    issues = load_issues()
+    on_main = main_paths()
+    records = [build_record(int(num), pr, basics.get(int(num), {}), verdicts, approved, now,
+                            on_main)
                for num, pr in snap["prs"].items()]
     records.sort(key=lambda r: -(r["waiting"] if r["waiting"] is not None else r["age"]))
     meta = {
         "generated": now.strftime("%Y-%m-%d %H:%M UTC"),
-        "repo": REPO, "hasAudit": bool(verdicts),
+        "repo": REPO, "hasAudit": bool(verdicts), "hasIssues": bool(issues),
     }
     data = json.dumps(records, ensure_ascii=False).replace("</", "<\\/")
     doc = (TEMPLATE
            .replace("__DATA__", data)
+           .replace("__ISSUES__", json.dumps(issues, ensure_ascii=False).replace("</", "<\\/"))
            .replace("__META__", json.dumps(meta).replace("</", "<\\/"))
            .replace("__STAMP__", meta["generated"])
            .replace("__FC_REPO__", FC_REPO_URL)
@@ -532,6 +584,7 @@ tbody tr:hover { background: color-mix(in oklab, var(--hover) 4%, transparent); 
   color: color-mix(in oklab, var(--run) 55%, var(--ink0)); }
 .flag--conflict { background: color-mix(in oklab, var(--cinnabar) 15%, transparent); color: var(--cinnabar); }
 .flag--rebase { background: color-mix(in oklab, var(--brass) 16%, transparent); color: var(--brass); }
+.flag--onmain { background: color-mix(in oklab, var(--stone) 16%, transparent); color: var(--stone); }
 .empty { padding: 44px 12px; text-align: center; color: var(--ink2); font-size: 14px; }
 .linkish { font: inherit; color: var(--accent); background: none; border: 0; cursor: pointer; text-decoration: underline; }
 
@@ -578,6 +631,7 @@ See the open pull requests at <a href="__FC_REPO__/pulls">github.com/google-deep
 </div>
 <script>
 const DATA = __DATA__;
+const ISSUES = __ISSUES__;
 const META = __META__;
 
 const AUDIT_LABEL = {signed:'signed', unconditional:'unconditional', conditional:'conditional', flagged:'flagged', unaudited:'unaudited'};
@@ -635,6 +689,7 @@ function flagsHtml(r){ let s = '';
     + r.ciAge + ' days ago, against an older main">CI ' + (r.ciAge >= 60 ? Math.round(r.ciAge/30) + 'mo' : r.ciAge + 'd') + ' old</span>';
   if (r.who && r.who.length) s += '<span class="flag flag--who" title="assigned to '
     + r.who.join(', ') + '">' + esc(r.who[0]) + (r.who.length > 1 ? ' +' + (r.who.length - 1) : '') + '</span>';
+  if (r.onMain) s += '<span class="flag flag--onmain" title="Every file this PR touches is already on the base branch, so the work may have landed another way. A prompt to check, not a verdict: a PR that edits existing files looks the same from here.">already on main?</span>';
   if (r.staleWhy) s += '<span class="flag flag--rebase" title="'+esc(r.staleWhy)+'">needs rebase</span>';
   if (r.ciPending) s += '<span class="flag flag--ci" title="CI has not run yet (often waiting on a maintainer to approve the workflow)">CI pending</span>';
   if (r.conflict) s += '<span class="flag flag--conflict" title="Merge conflict with the base branch">conflict</span>';
@@ -687,6 +742,21 @@ function renderQueue(recs){
   return out || emptyState();
 }
 function renderAll(recs){ return recs.length ? '<section>'+tableHtml(sortRecs(recs), true)+'</section>' : emptyState(); }
+// Conjectures nobody has claimed and nothing blocks: `new conjecture` without
+// `needs-prerequisites`. Oldest first, on the grounds that they have waited longest.
+function renderPick(){
+  const q = (state.q || '').toLowerCase();
+  const rows = ISSUES.filter(i => i.ready && (!q || i.title.toLowerCase().includes(q)))
+                     .sort((a, b) => b.age - a.age);
+  if (!rows.length) return emptyState();
+  return '<section><p class="muted">' + rows.length + ' conjectures with no missing prerequisites, oldest first.</p>'
+    + '<table><thead><tr><th>issue</th><th>title</th><th>area</th><th>open</th></tr></thead><tbody>'
+    + rows.map(i => '<tr><td class="num"><a href="https://github.com/' + META.repo + '/issues/' + i.n + '">#' + i.n + '</a></td>'
+        + '<td class="ti">' + esc(i.title) + '</td><td class="muted">' + esc(i.ams) + '</td>'
+        + '<td class="num">' + i.age + 'd</td></tr>').join('')
+    + '</tbody></table></section>';
+}
+
 function renderFidelity(recs){
   const byProblem = {};
   recs.forEach(r => r.audit.forEach(a => { (byProblem[a.n] || (byProblem[a.n] = {n:a.n, cls:a.cls, status:a.status, note:a.note, href:a.href, prs:[]})).prs.push(r); }));
@@ -738,7 +808,9 @@ function renderStrip(){
 function render(){
   const recs = DATA.filter(matches);
   countEl.textContent = recs.length === DATA.length ? DATA.length+' PRs' : recs.length+' of '+DATA.length+' PRs';
-  app.innerHTML = state.view === 'queue' ? renderQueue(recs) : state.view === 'fidelity' ? renderFidelity(recs) : renderAll(recs);
+  app.innerHTML = state.view === 'queue' ? renderQueue(recs)
+    : state.view === 'pick' ? renderPick()
+    : state.view === 'fidelity' ? renderFidelity(recs) : renderAll(recs);
   app.querySelectorAll('th.sortable').forEach(th => th.addEventListener('click', () => {
     const c = th.dataset.col;
     if (state.sort.col === c) state.sort.dir = state.sort.dir === 'asc' ? 'desc' : 'asc';
