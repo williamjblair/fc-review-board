@@ -122,7 +122,8 @@ def main_paths() -> set[str]:
     if not BASE_PATHS.exists():
         return set()
     return set(BASE_PATHS.read_text().split())
-def load_issues(claimed: dict[int, list[int]] | None = None) -> list[dict]:
+def load_issues(claimed: dict[int, list[int]] | None = None,
+                base: set[str] | None = None) -> list[dict]:
     """Open issues, for the picking-something-up view. Written by sync.sh; absent is fine,
     the view just does not appear."""
     if not ISSUES.exists() or not ISSUES.read_text().strip():
@@ -139,8 +140,26 @@ def load_issues(claimed: dict[int, list[int]] | None = None) -> list[dict]:
                          for l in labels if l.startswith("ams-")), ""),
             "age": days_since(it["createdAt"], datetime.now(timezone.utc)),
             "prs": sorted((claimed or {}).get(it["number"], [])),
+            "have": already_stated(it["title"], base or set()),
         })
     return out
+
+
+ERDOS_TITLE_RE = re.compile(r"Erd[őo]s Problem (\d+)")
+
+
+def already_stated(title: str, base: set[str]) -> str:
+    """The file already on the base branch that this issue asks for, if any.
+
+    Only exact for issues titled `Erdős Problem N`, which is 279 of the 444 unclaimed ones.
+    An issue stays open after the conjecture lands, so without this the list sends people to
+    write something the repository already has.
+    """
+    m = ERDOS_TITLE_RE.search(title)
+    if not m:
+        return ""
+    path = f"FormalConjectures/ErdosProblems/{m.group(1)}.lean"
+    return path if path in base else ""
 
 
 CLOSES_RE = re.compile(r"\b(?:closes|fixes|resolves|close|fix|resolve)\s+#(\d+)", re.I)
@@ -381,8 +400,8 @@ def main() -> None:
     verdicts = load_verdicts()
     approved = set(snap.get("lists", {}).get("dashboards", {}).get("Approved") or [])
     now = datetime.now(timezone.utc)
-    issues = load_issues(claims(snap))
     on_main = main_paths()
+    issues = load_issues(claims(snap), on_main)
     records = [build_record(int(num), pr, basics.get(int(num), {}), verdicts, approved, now,
                             on_main)
                for num, pr in snap["prs"].items()]
@@ -767,12 +786,15 @@ function renderAll(recs){ return recs.length ? '<section>'+tableHtml(sortRecs(re
 function renderPick(){
   const q = (state.q || '').toLowerCase();
   const all = ISSUES.filter(i => i.ready && (!q || i.title.toLowerCase().includes(q)));
-  const free = all.filter(i => !i.prs.length).sort((a, b) => b.age - a.age);
-  const taken = all.filter(i => i.prs.length).sort((a, b) => b.age - a.age);
+  const byAge = (a, b) => b.age - a.age;
+  const free = all.filter(i => !i.prs.length && !i.have).sort(byAge);
+  const taken = all.filter(i => i.prs.length).sort(byAge);
+  const done = all.filter(i => !i.prs.length && i.have).sort(byAge);
   if (!all.length) return emptyState();
   const row = i => '<tr><td class="num"><a href="https://github.com/' + META.repo + '/issues/' + i.n + '">#' + i.n + '</a></td>'
     + '<td class="ti">' + esc(i.title) + '</td><td class="muted">' + esc(i.ams) + '</td>'
     + '<td class="num">' + i.age + 'd</td><td>'
+    + (i.have ? '<a class="flag flag--onmain" href="https://github.com/' + META.repo + '/blob/main/' + i.have + '">in repo</a>' : '')
     + i.prs.map(n => '<a class="flag flag--onmain" href="https://github.com/' + META.repo + '/pull/' + n + '">#' + n + '</a>').join(' ')
     + '</td></tr>';
   const table = rows => '<table><thead><tr><th>issue</th><th>title</th><th>area</th><th>open</th><th>PR</th></tr></thead><tbody>'
@@ -781,6 +803,8 @@ function renderPick(){
     + table(free)
     + (taken.length ? '<p class="muted" style="margin-top:2rem">' + taken.length
         + ' more are already claimed by an open pull request.</p>' + table(taken) : '')
+    + (done.length ? '<p class="muted" style="margin-top:2rem">' + done.length
+        + ' already exist in the repository and the issue was never closed.</p>' + table(done) : '')
     + '</section>';
 }
 
