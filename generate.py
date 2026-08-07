@@ -214,6 +214,9 @@ BREAKING_CHANGES = [
     ("2026-07-17T00:00:00Z",
      "FormalConjectures.Util.ProblemImports was deleted (#4433); "
      "these branches need `import FormalConjecturesUtil` and a rebase"),
+    ("2026-08-02T16:22:00Z",
+     "the openClassical linter was switched on (#4671); a branch adding "
+     "`open Classical` now fails under --wfail"),
 ]
 
 
