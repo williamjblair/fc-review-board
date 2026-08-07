@@ -145,6 +145,27 @@ def approvals(pr: dict) -> int:
     return len(pr.get("approvals") or [])
 
 
+# Changes on `main` that break branches predating them. "CI is N days old" is a proxy for
+# this; naming the change is sharper, since it separates a branch that is merely old from one
+# whose tick was earned against a `main` that no longer exists. Add an entry when you land
+# something that breaks existing branches.
+BREAKING_CHANGES = [
+    ("2026-07-17T00:00:00Z",
+     "FormalConjectures.Util.ProblemImports was deleted (#4433); "
+     "these branches need `import FormalConjecturesUtil` and a rebase"),
+]
+
+
+def stale_reason(ran: str | None) -> str | None:
+    """The most recent breaking change on `main` that this PR's checks predate."""
+    if not ran:
+        return None
+    for when, what in sorted(BREAKING_CHANGES, reverse=True):
+        if ran < when:
+            return what
+    return None
+
+
 def ci_ran_at(basic: dict) -> str | None:
     """When this PR's checks last completed."""
     try:
@@ -281,6 +302,7 @@ def build_record(number: int, pr: dict, basic: dict, verdicts: dict[int, dict],
         "appr": approvals(pr),
         "who": sorted(pr.get("assignees") or []),
         "ciAge": (days_since(ran, now) if (ran := ci_ran_at(basic)) else None),
+        "staleWhy": stale_reason(ci_ran_at(basic)) or "",
         "churn": (pr.get("additions") or 0) + (pr.get("deletions") or 0),
         "audit": audit,
         "auditTop": pr_top_status(audit),
@@ -509,6 +531,7 @@ tbody tr:hover { background: color-mix(in oklab, var(--hover) 4%, transparent); 
 .flag--ci { background: color-mix(in oklab, var(--run) 18%, transparent);
   color: color-mix(in oklab, var(--run) 55%, var(--ink0)); }
 .flag--conflict { background: color-mix(in oklab, var(--cinnabar) 15%, transparent); color: var(--cinnabar); }
+.flag--rebase { background: color-mix(in oklab, var(--brass) 16%, transparent); color: var(--brass); }
 .empty { padding: 44px 12px; text-align: center; color: var(--ink2); font-size: 14px; }
 .linkish { font: inherit; color: var(--accent); background: none; border: 0; cursor: pointer; text-decoration: underline; }
 
@@ -612,6 +635,7 @@ function flagsHtml(r){ let s = '';
     + r.ciAge + ' days ago, against an older main">CI ' + (r.ciAge >= 60 ? Math.round(r.ciAge/30) + 'mo' : r.ciAge + 'd') + ' old</span>';
   if (r.who && r.who.length) s += '<span class="flag flag--who" title="assigned to '
     + r.who.join(', ') + '">' + esc(r.who[0]) + (r.who.length > 1 ? ' +' + (r.who.length - 1) : '') + '</span>';
+  if (r.staleWhy) s += '<span class="flag flag--rebase" title="'+esc(r.staleWhy)+'">needs rebase</span>';
   if (r.ciPending) s += '<span class="flag flag--ci" title="CI has not run yet (often waiting on a maintainer to approve the workflow)">CI pending</span>';
   if (r.conflict) s += '<span class="flag flag--conflict" title="Merge conflict with the base branch">conflict</span>';
   return s; }
