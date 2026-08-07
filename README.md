@@ -25,11 +25,12 @@ Each row carries CI status, approval count, size, and small flags:
 
 - **needs rebase** when a branch's checks predate a breaking change on `main`,
   naming which one. Two so far: `FormalConjectures.Util.ProblemImports` was
-  deleted in July, and the `openClassical` linter was switched on in August. 110
-  of the open PRs predate one of them and still show a passing tick, because it
-  was earned against a `main` that has moved. Not a mark against the PR: of six
-  sampled and rebuilt, three needed only the import swap, two also needed
-  `open Classical` dropped, and one had real type errors.
+  deleted in July, and the `openClassical` linter was switched on in August. 245
+  of the 279 open PRs predate one of them, and 213 of those still show a passing
+  tick, earned against a `main` that has moved. Predating a change is not the
+  same as being broken by it, and not a mark against the PR: of six sampled and
+  rebuilt, three needed only the import swap, two also needed `open Classical`
+  dropped, and one had real type errors.
 - **CI *n* old** when the checks last ran a month or more ago, for the branches
   that predate nothing in particular.
 - **already on main?** when every file a PR adds is already on the base branch,
