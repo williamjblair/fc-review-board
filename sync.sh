@@ -211,15 +211,6 @@ gh api "repos/$REPO/git/trees/$BASE?recursive=1" \
   --jq '.tree[] | select(.type=="blob") | .path' > "${QB_OUT:-$OLDPWD}/base_paths.txt"
 echo "==> wrote base_paths.txt ($(wc -l < "${QB_OUT:-$OLDPWD}/base_paths.txt" | tr -d ' ') paths)"
 
-# The repository's own extract of every problem it states, published by its site. Covers all
-# collections, not just the Erdős files, and is built from the Lean environment rather than
-# by pattern-matching source, so the board does not have to guess at any of it.
-echo "==> fetching the published problem extract"
-curl -sfL "https://google-deepmind.github.io/formal-conjectures/data/conjectures.json" \
-  -o "${QB_OUT:-$OLDPWD}/problems.json" \
-  && echo "==> wrote problems.json ($(jq '(.conjectures // .problems) | length' "${QB_OUT:-$OLDPWD}/problems.json") statements)" \
-  || echo "    could not fetch it; the problems view will be absent" >&2
-
 # Open issues, for the "pick one up" view. One cheap paginated query; the board treats a
 # missing file as "no issue view" rather than an error.
 echo "==> listing open issues"

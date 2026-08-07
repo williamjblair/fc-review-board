@@ -113,34 +113,6 @@ def load_basics() -> dict[int, dict]:
 
 
 ISSUES = HERE / "issues.json"
-PROBLEMS = HERE / "problems.json"
-
-
-def load_problems() -> list[dict]:
-    """Every problem the repository states, from its own published extract.
-
-    `extract_names` builds this from the Lean environment, so it covers all eight
-    collections rather than just the Erdős files, and knows the category and formal-proof
-    status exactly. Written by sync.sh; absent is fine, the view just does not appear."""
-    if not PROBLEMS.exists() or not PROBLEMS.read_text().strip():
-        return []
-    data = json.loads(PROBLEMS.read_text())
-    rows = data.get("conjectures") or data.get("problems") or []
-    out = []
-    for r in rows:
-        mod = r.get("module", "")
-        parts = mod.split(".")
-        out.append({
-            "t": r.get("displayTheorem") or r.get("theorem", ""),
-            "c": parts[1] if len(parts) > 1 else "",
-            "cat": r.get("category", ""),
-            "fp": bool(r.get("hasFormalProof") or r.get("formalProofLink")),
-            "url": r.get("githubUrl") or "",
-            "src": r.get("sourceUrl") or "",
-        })
-    return out
-
-
 BASE_PATHS = HERE / "base_paths.txt"
 
 
@@ -150,9 +122,7 @@ def main_paths() -> set[str]:
     if not BASE_PATHS.exists():
         return set()
     return set(BASE_PATHS.read_text().split())
-
-
-def load_issues() -> list[dict]:
+def load_issues(claimed: dict[int, list[int]] | None = None) -> list[dict]:
     """Open issues, for the picking-something-up view. Written by sync.sh; absent is fine,
     the view just does not appear."""
     if not ISSUES.exists() or not ISSUES.read_text().strip():
@@ -168,7 +138,25 @@ def load_issues() -> list[dict]:
             "ams": next((l.split(":")[0].replace("ams-", "AMS ").strip()
                          for l in labels if l.startswith("ams-")), ""),
             "age": days_since(it["createdAt"], datetime.now(timezone.utc)),
+            "prs": sorted((claimed or {}).get(it["number"], [])),
         })
+    return out
+
+
+CLOSES_RE = re.compile(r"\b(?:closes|fixes|resolves|close|fix|resolve)\s+#(\d+)", re.I)
+
+
+def claims(snapshot: dict) -> dict[int, list[int]]:
+    """Issue number -> the open PRs saying they close it.
+
+    The site knows what problems exist and GitHub knows what is in flight; nobody joins the
+    two, so a conjecture with an open PR against it looks exactly as unclaimed as one without.
+    That is how the same problem gets formalised twice.
+    """
+    out: dict[int, list[int]] = {}
+    for num, pr in (snapshot.get("prs") or {}).items():
+        for issue in set(CLOSES_RE.findall(pr.get("description") or "")):
+            out.setdefault(int(issue), []).append(int(num))
     return out
 
 
@@ -390,8 +378,7 @@ def main() -> None:
     verdicts = load_verdicts()
     approved = set(snap.get("lists", {}).get("dashboards", {}).get("Approved") or [])
     now = datetime.now(timezone.utc)
-    issues = load_issues()
-    problems = load_problems()
+    issues = load_issues(claims(snap))
     on_main = main_paths()
     records = [build_record(int(num), pr, basics.get(int(num), {}), verdicts, approved, now,
                             on_main)
@@ -400,12 +387,10 @@ def main() -> None:
     meta = {
         "generated": now.strftime("%Y-%m-%d %H:%M UTC"),
         "repo": REPO, "hasAudit": bool(verdicts), "hasIssues": bool(issues),
-        "hasProblems": bool(problems),
     }
     data = json.dumps(records, ensure_ascii=False).replace("</", "<\\/")
     doc = (TEMPLATE
            .replace("__DATA__", data)
-           .replace("__PROBLEMS__", json.dumps(problems, ensure_ascii=False).replace("</", "<\\/"))
            .replace("__ISSUES__", json.dumps(issues, ensure_ascii=False).replace("</", "<\\/"))
            .replace("__META__", json.dumps(meta).replace("</", "<\\/"))
            .replace("__STAMP__", meta["generated"])
@@ -662,7 +647,6 @@ See the open pull requests at <a href="__FC_REPO__/pulls">github.com/google-deep
 <script>
 const DATA = __DATA__;
 const ISSUES = __ISSUES__;
-const PROBLEMS = __PROBLEMS__;
 const META = __META__;
 
 const AUDIT_LABEL = {signed:'signed', unconditional:'unconditional', conditional:'conditional', flagged:'flagged', unaudited:'unaudited'};
@@ -720,7 +704,7 @@ function flagsHtml(r){ let s = '';
     + r.ciAge + ' days ago, against an older main">CI ' + (r.ciAge >= 60 ? Math.round(r.ciAge/30) + 'mo' : r.ciAge + 'd') + ' old</span>';
   if (r.who && r.who.length) s += '<span class="flag flag--who" title="assigned to '
     + r.who.join(', ') + '">' + esc(r.who[0]) + (r.who.length > 1 ? ' +' + (r.who.length - 1) : '') + '</span>';
-  if (r.onMain) s += '<span class="flag flag--onmain" title="Every file this PR touches is already on the base branch, so the work may have landed another way. A prompt to check, not a verdict: a PR that edits existing files looks the same from here.">already on main?</span>';
+  if (r.onMain) s += '<span class="flag flag--onmain" title="Every file this PR adds is already on the base branch, so the work may have landed another way. A prompt to check, not a verdict: the data cannot tell an added file from one that was only appended to.">already on main?</span>';
   if (r.staleWhy) s += '<span class="flag flag--rebase" title="'+esc(r.staleWhy)+'">needs rebase</span>';
   if (r.ciPending) s += '<span class="flag flag--ci" title="CI has not run yet (often waiting on a maintainer to approve the workflow)">CI pending</span>';
   if (r.conflict) s += '<span class="flag flag--conflict" title="Merge conflict with the base branch">conflict</span>';
@@ -773,48 +757,28 @@ function renderQueue(recs){
   return out || emptyState();
 }
 function renderAll(recs){ return recs.length ? '<section>'+tableHtml(sortRecs(recs), true)+'</section>' : emptyState(); }
-// Conjectures nobody has claimed and nothing blocks: `new conjecture` without
-// `needs-prerequisites`. Oldest first, on the grounds that they have waited longest.
-// Every problem the repository states, across all eight collections. The question this
-// answers is "what is in here and what state is it in", which the PR views cannot.
-function renderProblems(){
-  const q = (state.q || '').toLowerCase();
-  let rows = PROBLEMS.filter(p => !q || p.t.toLowerCase().includes(q) || p.c.toLowerCase().includes(q));
-  const by = {};
-  PROBLEMS.forEach(p => { by[p.c] = by[p.c] || {n:0, open:0, solved:0, linked:0};
-    by[p.c].n++;
-    if (p.cat === 'research open') by[p.c].open++;
-    if (p.cat === 'research solved') by[p.c].solved++;
-    if (p.fp) by[p.c].linked++; });
-  const summary = Object.entries(by).sort((a,b) => b[1].n - a[1].n).map(([k,v]) =>
-    '<tr><td>' + esc(k) + '</td><td class="num">' + v.n + '</td><td class="num">' + v.open
-    + '</td><td class="num">' + v.solved + '</td><td class="num">' + v.linked + '</td></tr>').join('');
-  const listed = rows.slice(0, 400);
-  return '<section><p class="muted">' + PROBLEMS.length + ' statements across '
-    + Object.keys(by).length + ' collections, from the repository\'s own extract.</p>'
-    + '<table><thead><tr><th>collection</th><th>statements</th><th>open</th><th>solved</th><th>proof linked</th></tr></thead><tbody>'
-    + summary + '</tbody></table>'
-    + (q ? '<p class="muted">' + rows.length + ' matching "' + esc(state.q) + '"'
-           + (rows.length > 400 ? ', first 400' : '') + '</p><table><thead><tr><th>statement</th><th>collection</th><th>category</th><th>proof</th></tr></thead><tbody>'
-           + listed.map(p => '<tr><td class="ti">' + (p.url ? '<a href="' + esc(p.url) + '">' + esc(p.t) + '</a>' : esc(p.t))
-               + '</td><td class="muted">' + esc(p.c) + '</td><td class="muted">' + esc(p.cat) + '</td>'
-               + '<td>' + (p.fp ? '<span class="flag flag--ok">linked</span>' : '') + '</td></tr>').join('')
-           + '</tbody></table>'
-       : '<p class="muted">Search to list individual statements.</p>')
-    + '</section>';
-}
-
+// Conjectures nothing blocks and nobody has started: `new conjecture` without
+// `needs-prerequisites`, minus the ones an open PR already says it closes. That last part is
+// the whole point of showing this here rather than linking to the issue list, which cannot
+// see the pull requests.
 function renderPick(){
   const q = (state.q || '').toLowerCase();
-  const rows = ISSUES.filter(i => i.ready && (!q || i.title.toLowerCase().includes(q)))
-                     .sort((a, b) => b.age - a.age);
-  if (!rows.length) return emptyState();
-  return '<section><p class="muted">' + rows.length + ' conjectures with no missing prerequisites, oldest first.</p>'
-    + '<table><thead><tr><th>issue</th><th>title</th><th>area</th><th>open</th></tr></thead><tbody>'
-    + rows.map(i => '<tr><td class="num"><a href="https://github.com/' + META.repo + '/issues/' + i.n + '">#' + i.n + '</a></td>'
-        + '<td class="ti">' + esc(i.title) + '</td><td class="muted">' + esc(i.ams) + '</td>'
-        + '<td class="num">' + i.age + 'd</td></tr>').join('')
-    + '</tbody></table></section>';
+  const all = ISSUES.filter(i => i.ready && (!q || i.title.toLowerCase().includes(q)));
+  const free = all.filter(i => !i.prs.length).sort((a, b) => b.age - a.age);
+  const taken = all.filter(i => i.prs.length).sort((a, b) => b.age - a.age);
+  if (!all.length) return emptyState();
+  const row = i => '<tr><td class="num"><a href="https://github.com/' + META.repo + '/issues/' + i.n + '">#' + i.n + '</a></td>'
+    + '<td class="ti">' + esc(i.title) + '</td><td class="muted">' + esc(i.ams) + '</td>'
+    + '<td class="num">' + i.age + 'd</td><td>'
+    + i.prs.map(n => '<a class="flag flag--onmain" href="https://github.com/' + META.repo + '/pull/' + n + '">#' + n + '</a>').join(' ')
+    + '</td></tr>';
+  const table = rows => '<table><thead><tr><th>issue</th><th>title</th><th>area</th><th>open</th><th>PR</th></tr></thead><tbody>'
+    + rows.map(row).join('') + '</tbody></table>';
+  return '<section><p class="muted">' + free.length + ' conjectures with no missing prerequisites and no open PR, oldest first.</p>'
+    + table(free)
+    + (taken.length ? '<p class="muted" style="margin-top:2rem">' + taken.length
+        + ' more are already claimed by an open pull request.</p>' + table(taken) : '')
+    + '</section>';
 }
 
 function renderFidelity(recs){
@@ -870,7 +834,6 @@ function render(){
   countEl.textContent = recs.length === DATA.length ? DATA.length+' PRs' : recs.length+' of '+DATA.length+' PRs';
   app.innerHTML = state.view === 'queue' ? renderQueue(recs)
     : state.view === 'pick' ? renderPick()
-    : state.view === 'problems' ? renderProblems()
     : state.view === 'fidelity' ? renderFidelity(recs) : renderAll(recs);
   app.querySelectorAll('th.sortable').forEach(th => th.addEventListener('click', () => {
     const c = th.dataset.col;
@@ -897,10 +860,9 @@ function updateFilterUI(){
 }
 
 function buildToolbar(){
-  tabsEl.innerHTML = [['queue','Queue'],['all','All PRs'],['pick','Pick one up'],['problems','Problems'],['fidelity','Fidelity']]
+  tabsEl.innerHTML = [['queue','Queue'],['all','All PRs'],['pick','Pick one up'],['fidelity','Fidelity']]
     .filter(v => (v[0] !== 'fidelity' || META.hasAudit)
-              && (v[0] !== 'pick' || META.hasIssues)
-              && (v[0] !== 'problems' || META.hasProblems))
+              && (v[0] !== 'pick' || META.hasIssues))
     .map(([k, l]) => '<button class="tab" role="tab" data-view="'+k+'">'+l+'</button>').join('');
   tabsEl.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => { state.view = b.dataset.view; syncUrl(); updateTabs(); render(); }));
   const groups = FACETS.filter(f => f.group !== 'audit' || META.hasAudit);
