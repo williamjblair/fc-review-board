@@ -113,6 +113,32 @@ def load_basics() -> dict[int, dict]:
 
 
 ISSUES = HERE / "issues.json"
+PROBLEMS = HERE / "problems.json"
+
+
+def load_problems() -> list[dict]:
+    """Every problem the repository states, from its own published extract.
+
+    `extract_names` builds this from the Lean environment, so it covers all eight
+    collections rather than just the Erdős files, and knows the category and formal-proof
+    status exactly. Written by sync.sh; absent is fine, the view just does not appear."""
+    if not PROBLEMS.exists() or not PROBLEMS.read_text().strip():
+        return []
+    data = json.loads(PROBLEMS.read_text())
+    rows = data.get("conjectures") or data.get("problems") or []
+    out = []
+    for r in rows:
+        mod = r.get("module", "")
+        parts = mod.split(".")
+        out.append({
+            "t": r.get("displayTheorem") or r.get("theorem", ""),
+            "c": parts[1] if len(parts) > 1 else "",
+            "cat": r.get("category", ""),
+            "fp": bool(r.get("hasFormalProof") or r.get("formalProofLink")),
+            "url": r.get("githubUrl") or "",
+            "src": r.get("sourceUrl") or "",
+        })
+    return out
 
 
 BASE_PATHS = HERE / "base_paths.txt"
@@ -365,6 +391,7 @@ def main() -> None:
     approved = set(snap.get("lists", {}).get("dashboards", {}).get("Approved") or [])
     now = datetime.now(timezone.utc)
     issues = load_issues()
+    problems = load_problems()
     on_main = main_paths()
     records = [build_record(int(num), pr, basics.get(int(num), {}), verdicts, approved, now,
                             on_main)
@@ -373,10 +400,12 @@ def main() -> None:
     meta = {
         "generated": now.strftime("%Y-%m-%d %H:%M UTC"),
         "repo": REPO, "hasAudit": bool(verdicts), "hasIssues": bool(issues),
+        "hasProblems": bool(problems),
     }
     data = json.dumps(records, ensure_ascii=False).replace("</", "<\\/")
     doc = (TEMPLATE
            .replace("__DATA__", data)
+           .replace("__PROBLEMS__", json.dumps(problems, ensure_ascii=False).replace("</", "<\\/"))
            .replace("__ISSUES__", json.dumps(issues, ensure_ascii=False).replace("</", "<\\/"))
            .replace("__META__", json.dumps(meta).replace("</", "<\\/"))
            .replace("__STAMP__", meta["generated"])
@@ -584,6 +613,7 @@ tbody tr:hover { background: color-mix(in oklab, var(--hover) 4%, transparent); 
   color: color-mix(in oklab, var(--run) 55%, var(--ink0)); }
 .flag--conflict { background: color-mix(in oklab, var(--cinnabar) 15%, transparent); color: var(--cinnabar); }
 .flag--rebase { background: color-mix(in oklab, var(--brass) 16%, transparent); color: var(--brass); }
+.flag--ok { background: color-mix(in oklab, var(--ok) 15%, transparent); color: var(--ok); }
 .flag--onmain { background: color-mix(in oklab, var(--stone) 16%, transparent); color: var(--stone); }
 .empty { padding: 44px 12px; text-align: center; color: var(--ink2); font-size: 14px; }
 .linkish { font: inherit; color: var(--accent); background: none; border: 0; cursor: pointer; text-decoration: underline; }
@@ -632,6 +662,7 @@ See the open pull requests at <a href="__FC_REPO__/pulls">github.com/google-deep
 <script>
 const DATA = __DATA__;
 const ISSUES = __ISSUES__;
+const PROBLEMS = __PROBLEMS__;
 const META = __META__;
 
 const AUDIT_LABEL = {signed:'signed', unconditional:'unconditional', conditional:'conditional', flagged:'flagged', unaudited:'unaudited'};
@@ -744,6 +775,35 @@ function renderQueue(recs){
 function renderAll(recs){ return recs.length ? '<section>'+tableHtml(sortRecs(recs), true)+'</section>' : emptyState(); }
 // Conjectures nobody has claimed and nothing blocks: `new conjecture` without
 // `needs-prerequisites`. Oldest first, on the grounds that they have waited longest.
+// Every problem the repository states, across all eight collections. The question this
+// answers is "what is in here and what state is it in", which the PR views cannot.
+function renderProblems(){
+  const q = (state.q || '').toLowerCase();
+  let rows = PROBLEMS.filter(p => !q || p.t.toLowerCase().includes(q) || p.c.toLowerCase().includes(q));
+  const by = {};
+  PROBLEMS.forEach(p => { by[p.c] = by[p.c] || {n:0, open:0, solved:0, linked:0};
+    by[p.c].n++;
+    if (p.cat === 'research open') by[p.c].open++;
+    if (p.cat === 'research solved') by[p.c].solved++;
+    if (p.fp) by[p.c].linked++; });
+  const summary = Object.entries(by).sort((a,b) => b[1].n - a[1].n).map(([k,v]) =>
+    '<tr><td>' + esc(k) + '</td><td class="num">' + v.n + '</td><td class="num">' + v.open
+    + '</td><td class="num">' + v.solved + '</td><td class="num">' + v.linked + '</td></tr>').join('');
+  const listed = rows.slice(0, 400);
+  return '<section><p class="muted">' + PROBLEMS.length + ' statements across '
+    + Object.keys(by).length + ' collections, from the repository\'s own extract.</p>'
+    + '<table><thead><tr><th>collection</th><th>statements</th><th>open</th><th>solved</th><th>proof linked</th></tr></thead><tbody>'
+    + summary + '</tbody></table>'
+    + (q ? '<p class="muted">' + rows.length + ' matching "' + esc(state.q) + '"'
+           + (rows.length > 400 ? ', first 400' : '') + '</p><table><thead><tr><th>statement</th><th>collection</th><th>category</th><th>proof</th></tr></thead><tbody>'
+           + listed.map(p => '<tr><td class="ti">' + (p.url ? '<a href="' + esc(p.url) + '">' + esc(p.t) + '</a>' : esc(p.t))
+               + '</td><td class="muted">' + esc(p.c) + '</td><td class="muted">' + esc(p.cat) + '</td>'
+               + '<td>' + (p.fp ? '<span class="flag flag--ok">linked</span>' : '') + '</td></tr>').join('')
+           + '</tbody></table>'
+       : '<p class="muted">Search to list individual statements.</p>')
+    + '</section>';
+}
+
 function renderPick(){
   const q = (state.q || '').toLowerCase();
   const rows = ISSUES.filter(i => i.ready && (!q || i.title.toLowerCase().includes(q)))
@@ -810,6 +870,7 @@ function render(){
   countEl.textContent = recs.length === DATA.length ? DATA.length+' PRs' : recs.length+' of '+DATA.length+' PRs';
   app.innerHTML = state.view === 'queue' ? renderQueue(recs)
     : state.view === 'pick' ? renderPick()
+    : state.view === 'problems' ? renderProblems()
     : state.view === 'fidelity' ? renderFidelity(recs) : renderAll(recs);
   app.querySelectorAll('th.sortable').forEach(th => th.addEventListener('click', () => {
     const c = th.dataset.col;
