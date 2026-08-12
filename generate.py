@@ -81,6 +81,7 @@ BOARD_REPO_URL = "https://github.com/williamjblair/fc-review-board"
 
 SNAPSHOT = HERE / "snapshot.json"
 BASICS = HERE / "pr_basics.json"
+PR_AUDITS = HERE / "pr_audits.json"
 
 
 def _unwrap(v):
@@ -196,6 +197,25 @@ def load_verdicts() -> dict[int, dict]:
         return {}
     rows = data.get("rows", []) if isinstance(data, dict) else data
     return {r["problem"]: r for r in rows if "problem" in r}
+
+
+def _unique_pairs(pairs: list[tuple[str, object]]) -> dict:
+    out = {}
+    for key, value in pairs:
+        if key in out:
+            raise ValueError(f"duplicate JSON key in audit feed: {key}")
+        out[key] = value
+    return out
+
+
+def load_pr_audits() -> dict[int, dict]:
+    """Load the exact per-PR advisory projection when it is present."""
+    if not PR_AUDITS.exists():
+        return {}
+    from fc_pr_audit import validate_projection
+    data = json.loads(PR_AUDITS.read_text(), object_pairs_hook=_unique_pairs)
+    validate_projection(data)
+    return {row["pull_request"]["number"]: row for row in data["rows"]}
 
 
 # --- classification -------------------------------------------------------
@@ -356,6 +376,7 @@ def pr_top_status(audit: list[dict]) -> str | None:
 
 
 def build_record(number: int, pr: dict, basic: dict, verdicts: dict[int, dict],
+                 pr_audits: dict[int, dict],
                  approved: set[int], now: datetime, on_main: set[str]) -> dict:
     audit = []
     for n in problem_numbers(pr):
@@ -394,6 +415,7 @@ def build_record(number: int, pr: dict, basic: dict, verdicts: dict[int, dict],
         "audit": audit,
         "auditTop": pr_top_status(audit),
         "auditStatuses": sorted({a["status"] for a in audit}),
+        "prAudit": pr_audits.get(number),
     }
 
 
@@ -401,21 +423,28 @@ def main() -> None:
     snap = load_snapshot()
     basics = load_basics()
     verdicts = load_verdicts()
+    pr_audits = load_pr_audits()
     approved = set(snap.get("lists", {}).get("dashboards", {}).get("Approved") or [])
     now = datetime.now(timezone.utc)
     on_main = main_paths()
     issues = load_issues(claims(snap), on_main)
-    records = [build_record(int(num), pr, basics.get(int(num), {}), verdicts, approved, now,
+    records = [build_record(int(num), pr, basics.get(int(num), {}), verdicts, pr_audits,
+                            approved, now,
                             on_main)
                for num, pr in snap["prs"].items()]
     records.sort(key=lambda r: -(r["waiting"] if r["waiting"] is not None else r["age"]))
+    joined_pr_audits = [record for record in records if record["prAudit"] is not None]
     meta = {
         "generated": now.strftime("%Y-%m-%d %H:%M UTC"),
-        "repo": REPO, "hasAudit": bool(verdicts), "hasIssues": bool(issues),
+        "repo": REPO, "hasAudit": bool(verdicts),
+        "hasPrAudit": bool(joined_pr_audits), "hasPrAuditFeed": bool(pr_audits),
+        "hasIssues": bool(issues),
     }
     data = json.dumps(records, ensure_ascii=False).replace("</", "<\\/")
     doc = (TEMPLATE
            .replace("__DATA__", data)
+           .replace("__PR_AUDITS__", json.dumps(list(pr_audits.values()), ensure_ascii=False)
+                    .replace("</", "<\\/"))
            .replace("__ISSUES__", json.dumps(issues, ensure_ascii=False).replace("</", "<\\/"))
            .replace("__META__", json.dumps(meta).replace("</", "<\\/"))
            .replace("__STAMP__", meta["generated"])
@@ -423,7 +452,12 @@ def main() -> None:
            .replace("__FC_SITE__", FC_SITE_URL)
            .replace("__BOARD_REPO__", BOARD_REPO_URL)
            .replace("__METHOD__", METHOD_URL)
-           .replace("__FRONTIER__", FRONTIER_URL))
+           .replace("__FRONTIER__", FRONTIER_URL)
+           .replace("__PR_AUDIT_NOTE__", (
+               '<p><strong>The PR audit column</strong> is a deterministic projection of '
+               'the exact source-local FC audit records. Its labels are advisory evidence, '
+               'not approval, merge readiness, mathematical truth, or Repository authority.</p>'
+               if pr_audits else "")))
     if not verdicts:
         doc = re.sub(r"\s*<p><strong>The audit column</strong>.*?</p>", "", doc, flags=re.S)
         doc = re.sub(r"\s*<p>PR data via the GitHub API\..*?</p>",
@@ -605,6 +639,12 @@ tbody tr:hover { background: color-mix(in oklab, var(--hover) 4%, transparent); 
   border-color: color-mix(in oklab, var(--gold) 55%, transparent); }
 .ab--discrepancy { color: var(--cinnabar); background: color-mix(in oklab, var(--cinnabar) 12%, transparent);
   border-color: color-mix(in oklab, var(--cinnabar) 42%, transparent); }
+.pa { white-space: nowrap; }
+.pa--needs_revision { color: var(--cinnabar); background: color-mix(in oklab, var(--cinnabar) 12%, transparent);
+  border-color: color-mix(in oklab, var(--cinnabar) 42%, transparent); }
+.pa--inconclusive { color: var(--brass); background: color-mix(in oklab, var(--brass) 14%, transparent);
+  border-color: color-mix(in oklab, var(--brass) 40%, transparent); }
+.pa--unavailable { color: var(--stone); background: none; border-color: var(--rule2); }
 .roll { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; font-size: 12px; color: var(--ink2); }
 .roll b { color: var(--ink0); font-variant-numeric: tabular-nums; margin-right: 3px; }
 .rc { display: inline-block; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
@@ -627,6 +667,19 @@ tbody tr:hover { background: color-mix(in oklab, var(--hover) 4%, transparent); 
 .flag--onmain { background: color-mix(in oklab, var(--stone) 16%, transparent); color: var(--stone); }
 .empty { padding: 44px 12px; text-align: center; color: var(--ink2); font-size: 14px; }
 .linkish { font: inherit; color: var(--accent); background: none; border: 0; cursor: pointer; text-decoration: underline; }
+.skip { position: fixed; left: 12px; top: 8px; z-index: 10; transform: translateY(-160%);
+  padding: 9px 12px; border-radius: 6px; background: var(--ink0); color: var(--bg); }
+.skip:focus { transform: none; }
+.audit-records { border-top: 1px solid var(--rule); }
+.audit-record { padding: 18px 0; border-bottom: 1px solid var(--rule); }
+.audit-record-h { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.audit-record-h a { color: var(--accent); text-decoration: none; }
+.audit-record-h a:hover { color: var(--gold-ink); text-decoration: underline; }
+.audit-record ul { margin: 12px 0; padding-left: 22px; color: var(--ink1); line-height: 1.65; }
+.audit-record p { margin: 0; overflow-wrap: anywhere; text-align: left; white-space: normal; }
+@media (max-width: 600px) {
+  .audit-record-h { align-items: flex-start; flex-direction: column; gap: 8px; }
+}
 
 footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--rule);
   color: var(--ink2); font-size: 12px; line-height: 1.75; }
@@ -635,7 +688,7 @@ footer a { color: var(--ink1); text-decoration: none; border-bottom: 1px solid v
 footer a:hover { color: var(--accent); border-color: var(--accent); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style></head>
-<body><div class="wrap">
+<body><a class="skip" href="#app">Skip to content</a><div class="wrap">
 <header>
   <h1>formal-conjectures <span class="h1-sub">&middot; review queue</span></h1>
   <div class="meta">Updated __STAMP__<span class="sep">|</span><a href="__FC_REPO__/pulls">pull requests</a><span class="sep">|</span><a href="__FC_SITE__">formal-conjectures</a><span class="sep">|</span><a href="__BOARD_REPO__">source</a></div>
@@ -653,10 +706,11 @@ footer a:hover { color: var(--accent); border-color: var(--accent); }
     <span class="count" id="count"></span>
   </div>
 </div>
-<div id="app" aria-live="polite"></div>
+<main id="app" tabindex="-1" aria-live="polite"></main>
 <noscript><p class="empty">This board needs JavaScript to filter and render.
 See the open pull requests at <a href="__FC_REPO__/pulls">github.com/google-deepmind/formal-conjectures</a>.</p></noscript>
 <footer>
+  __PR_AUDIT_NOTE__
   <p><strong>The audit column</strong> joins each Erd&#337;s-problem PR to the public fidelity audit &mdash;
   whether the linked proof is machine-checked unconditional, rests on a named assumption, or carries a
   signed reviewer verdict. It reports a fact next to the PR; the merge decision is the maintainer's.
@@ -671,6 +725,7 @@ See the open pull requests at <a href="__FC_REPO__/pulls">github.com/google-deep
 </div>
 <script>
 const DATA = __DATA__;
+const PR_AUDITS = __PR_AUDITS__;
 const ISSUES = __ISSUES__;
 const META = __META__;
 
@@ -681,8 +736,8 @@ const AUDIT_DOT = {signed:'gold', unconditional:'moss', conditional:'brass', fla
 const CARET = '<svg width="9" height="9" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const FID_TITLE = {flagged:'Flagged unfaithful', conditional:'Conditional — rests on an assumption', signed:'Signed faithful', unconditional:'Machine-checked unconditional', unaudited:'Not yet audited'};
 const BUCKETS = [['approved','Approved, ready to merge'],['review','Ready for review'],['author','Waiting on the author'],['draft','Draft / work in progress']];
-const COLS = [['n','PR'],['title','title'],['author','author'],['kind','kind'],['audit','audit'],['age','open'],['waiting','waiting'],['idle','idle'],['ci','CI'],['appr','&check;'],['churn','&pm;']];
-const COLUMNS = COLS.filter(c => c[0] !== 'audit' || META.hasAudit);
+const COLS = [['n','PR'],['title','title'],['author','author'],['kind','kind'],['prAudit','PR audit'],['audit','problem audit'],['age','open'],['waiting','waiting'],['idle','idle'],['ci','CI'],['appr','&check;'],['churn','&pm;']];
+const COLUMNS = COLS.filter(c => (c[0] !== 'audit' || META.hasAudit) && (c[0] !== 'prAudit' || META.hasPrAudit));
 const SORTABLE = {n:1, author:1, audit:1, age:1, waiting:1, idle:1, ci:1, appr:1, churn:1};
 // Only offer collections that are actually present, so the menu reflects the
 // queue rather than the repo's full label list.
@@ -722,6 +777,11 @@ function auditCell(r){
   const title = r.audit.length+' problems: '+order.map(s => counts[s]+' '+AUDIT_LABEL[s]).join(', ');
   return '<td class="audit"><span class="roll" title="'+title+'"><b>'+r.audit.length+'</b>'+chips+'</span></td>';
 }
+function prAuditCell(r){
+  if (!r.prAudit) return '<td class="audit"></td>';
+  const d = r.prAudit.advisory_disposition;
+  return '<td class="audit"><a class="ab pa pa--'+d+'" href="'+r.prAudit.source_url+'" title="Inspect the exact advisory FC audit record; not approval or authority">'+d.replaceAll('_', ' ')+'</a></td>';
+}
 function flagsHtml(r){ let s = '';
   // A tick from months ago was earned against a main that has moved since.
   // Reported as an age, not as a verdict: the reviewer decides what it means.
@@ -742,6 +802,7 @@ function rowHtml(r){
     + '<td class="ttl"><span class="ttl-t">'+esc(r.title)+'</span>'+flagsHtml(r)+'</td>'
     + '<td class="who">'+esc(r.author)+'</td>'
     + '<td><span class="tag tag--'+r.kind+'">'+r.kind+'</span></td>'
+    + (META.hasPrAudit ? prAuditCell(r) : '')
     + (META.hasAudit ? auditCell(r) : '')
     + '<td class="mono">'+r.age+'d</td>'
     + '<td class="mono" title="time actually spent on the review queue">'+(r.waiting == null ? '<span class="dash">&mdash;</span>' : r.waiting+'d')+'</td>'
@@ -827,6 +888,23 @@ function renderFidelity(recs){
     + '</tbody></table></div></section>').join('');
 }
 
+function renderPrAudits(){
+  if (!PR_AUDITS.length) return emptyState('No exact per-PR audit records are configured.');
+  const rows = PR_AUDITS.map(r => {
+    const pr = r.pull_request;
+    const checks = r.checks.map(c => '<li><code>'+esc(c.id)+'</code> &middot; '
+      +esc(c.property)+' &middot; <strong>'+esc(c.outcome)+'</strong>'
+      +(c.severity === 'none' ? '' : ' &middot; '+esc(c.severity))+'</li>').join('');
+    return '<article class="audit-record"><div class="audit-record-h"><div><a class="num" href="'+pr.url+'">#'+pr.number+'</a> '
+      +'<a href="'+r.source_url+'"><strong>'+esc(r.fixture)+'</strong></a></div>'
+      +'<span class="ab pa pa--'+r.advisory_disposition+'">'+r.advisory_disposition.replaceAll('_',' ')+'</span></div>'
+      +'<ul>'+checks+'</ul><p class="muted mono">core '+esc(r.core.root)+'<br>observation '+esc(r.observation.root)+'</p></article>';
+  }).join('');
+  return '<section><div class="sec-h"><h2>Exact per-PR audit records</h2><span class="n">'+PR_AUDITS.length+'</span></div>'
+    +'<p class="muted">Five commit-pinned advisory fixtures. They do not establish approval, merge readiness, mathematical truth, Decision, or Standing.</p>'
+    +'<div class="audit-records">'+rows+'</div></section>';
+}
+
 function statHtml(v, l, cls, facet){
   const body = '<span class="sv '+(cls||'')+'">'+v+'</span> <span class="sl">'+l+'</span>';
   if (!facet) return '<div class="stat">'+body+'</div>';
@@ -864,7 +942,8 @@ function render(){
   countEl.textContent = recs.length === DATA.length ? DATA.length+' PRs' : recs.length+' of '+DATA.length+' PRs';
   app.innerHTML = state.view === 'queue' ? renderQueue(recs)
     : state.view === 'pick' ? renderPick()
-    : state.view === 'fidelity' ? renderFidelity(recs) : renderAll(recs);
+    : state.view === 'fidelity' ? renderFidelity(recs)
+    : state.view === 'pr-audits' ? renderPrAudits() : renderAll(recs);
   app.querySelectorAll('th.sortable').forEach(th => th.addEventListener('click', () => {
     const c = th.dataset.col;
     if (state.sort.col === c) state.sort.dir = state.sort.dir === 'asc' ? 'desc' : 'asc';
@@ -890,9 +969,10 @@ function updateFilterUI(){
 }
 
 function buildToolbar(){
-  tabsEl.innerHTML = [['queue','Queue'],['all','All PRs'],['pick','Pick one up'],['fidelity','Fidelity']]
+  tabsEl.innerHTML = [['queue','Queue'],['all','All PRs'],['pick','Pick one up'],['fidelity','Fidelity'],['pr-audits','PR audits']]
     .filter(v => (v[0] !== 'fidelity' || META.hasAudit)
-              && (v[0] !== 'pick' || META.hasIssues))
+              && (v[0] !== 'pick' || META.hasIssues)
+              && (v[0] !== 'pr-audits' || META.hasPrAuditFeed))
     .map(([k, l]) => '<button class="tab" role="tab" data-view="'+k+'">'+l+'</button>').join('');
   tabsEl.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => { state.view = b.dataset.view; syncUrl(); updateTabs(); render(); }));
   const groups = FACETS.filter(f => f.group !== 'audit' || META.hasAudit);

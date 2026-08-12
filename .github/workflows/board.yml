@@ -9,11 +9,7 @@ on:
   push:
     branches: [main]
 
-# Least privilege for the official GitHub Pages deployment.
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+permissions: {}
 
 # Never cancel an in-flight deploy; let each run finish.
 concurrency:
@@ -22,15 +18,37 @@ concurrency:
 
 jobs:
   build:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@e58605c7f738e8a4f382c24f13e57da72be399e6 # v5
+
+      - name: Check out the exact public FC audit packet
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: williamjblair/formal-conjectures
+          ref: 4b5df9dcc7f7f3458b593aa816b7a2476d71f8e5
+          path: .fc-pr-audit-source
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate and project the exact FC per-PR audit records
+        env:
+          FC_PR_AUDIT_SOURCE: ${{ github.workspace }}/.fc-pr-audit-source
+        run: |
+          test "$(git -C "$FC_PR_AUDIT_SOURCE" rev-parse HEAD)" = 4b5df9dcc7f7f3458b593aa816b7a2476d71f8e5
+          test "$(git -C "$FC_PR_AUDIT_SOURCE" rev-parse HEAD^{tree})" = 43a629d29b38811bb5dba76c409215ef980ea761
+          python3 -B fc_pr_audit.py --source "$FC_PR_AUDIT_SOURCE" --output pr_audits.json
+          python3 -B -m unittest -v test_fc_pr_audit.py
 
       # No audit feed by default. Set a VERDICTS_URL repository variable to
       # point at one and the fidelity column appears; without it the board
@@ -65,16 +83,19 @@ jobs:
           mkdir -p _site
           cp index.html _site/index.html
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: _site
 
   deploy:
     needs: build
+    permissions:
+      pages: write
+      id-token: write
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164a3d2e78d20b302e7b98a331e98131c9 # v4

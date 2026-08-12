@@ -41,6 +41,12 @@ Each row carries CI status, approval count, size, and small flags:
   which is the thing worth changing if several people start reviewing at once.
 - merge conflicts, and PRs whose CI has not run at all (usually waiting on a
   maintainer to approve the workflow for a first-time contributor).
+- an exact **PR audit** label when that pull request is one of the five frozen
+  `formal-conjectures.pr-audit.v1` cases. The label comes from the same
+  validated core and observation records used by the native summary, skill,
+  evaluation packet, and Vela adapter, and links to the commit-pinned record.
+  `needs revision`, `inconclusive`, and `unavailable` remain distinct; none
+  means approval, merge readiness, mathematical truth, or Repository authority.
 
 Besides the queue there is a **Pick one up** view: the conjecture issues with no
 missing prerequisites, oldest first, split into the ones nothing has started and
@@ -61,7 +67,7 @@ work in an area they know.
 The `ams-*` subject labels would be the better axis, but exactly one open PR
 carries one: they get applied to issues rather than pull requests.
 
-### The audit column (optional, off by default)
+### The problem audit column (optional, off by default)
 
 Set a `VERDICTS_URL` repository variable pointing at a `verdicts.json` and an
 extra column appears, showing per problem whether a linked proof was found
@@ -75,6 +81,19 @@ review dashboard should not depend on a third-party service to draw a column,
 and because most of what it would report is Erdős-specific: of 3503 statements
 in the repository, 295 carry a `formal_proof` link at all, and 243 of those are
 Erdős problems.
+
+### The exact per-PR audit column
+
+The hosted build checks out the public audit prototype at exact commit
+`4b5df9dcc7f7f3458b593aa816b7a2476d71f8e5` and tree
+`43a629d29b38811bb5dba76c409215ef980ea761`. `fc_pr_audit.py` verifies the
+validator and schema bytes, validates all five core and observation records,
+checks their pair bindings and roots, and emits a small closed projection. The
+board joins that projection by native pull-request number. Unsupported or
+drifted records fail the build rather than losing or reinterpreting a status.
+
+This prototype is program-owned evidence on a contributor fork. It is not an
+upstream Formal Conjectures installation or maintainer decision.
 
 
 ## How it works
@@ -125,10 +144,11 @@ clone. `generate.py` on its own is instant once `snapshot.json` exists.
 
 ## Configuration
 
-The audit feed URL defaults to the Erdős frontier snapshot and is overridable
-via the `VERDICTS_URL` environment variable (or a `VERDICTS_URL` repository
-variable in the Action). Point it at any compatible `verdicts.json`, or at an
-empty feed to drop the audit column entirely.
+The optional problem-audit feed is absent by default. Set `VERDICTS_URL` in the
+environment (or as a repository variable in the Action) to a compatible
+`verdicts.json` to enable it. The exact per-PR audit projection has no moving
+configuration: its public source commit, tree, validator, schemas, and fixture
+roots are reviewed pins in `fc_pr_audit.py` and the workflow.
 
 ## Attribution
 

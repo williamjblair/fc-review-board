@@ -1,6 +1,7 @@
 # Fetched/generated at build time by the workflow. Not source.
 prs.json
 verdicts.json
+pr_audits.json
 index.html
 _site/
 err.txt
