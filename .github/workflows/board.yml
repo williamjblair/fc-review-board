@@ -30,7 +30,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - uses: astral-sh/setup-uv@e58605c7f738e8a4f382c24f13e57da72be399e6 # v5
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
 
       - name: Check out the exact public FC audit packet
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
