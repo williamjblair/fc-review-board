@@ -88,6 +88,7 @@ class FcPrAuditProjectionTest(unittest.TestCase):
         self.assertIn("python3 -B fc_pr_audit.py", workflow)
         self.assertIn("python3 -B -m unittest -v test_fc_pr_audit.py", workflow)
         self.assertIn("astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86", workflow)
+        self.assertIn("actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e", workflow)
         self.assertNotRegex(workflow, r"uses:\s+[^\s]+@v\d")
 
     def test_board_consumer_preserves_the_exact_pr_outcome(self) -> None:
