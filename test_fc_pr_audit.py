@@ -41,7 +41,7 @@ class FcPrAuditProjectionTest(unittest.TestCase):
         )
         self.assertEqual(
             self.projection["root"],
-            "sha256:14ebb907c170980bcabe8fc98153f0d099383cda6d9e3a595d31a9a5467d2f58",
+            "sha256:10b6d9fbdf6e328e26ce129c91a0b2b8f47e6a37324794b598080b751e790fab",
         )
 
     def test_clean_candidate_is_not_clean_and_unavailable_is_not_failure(self) -> None:

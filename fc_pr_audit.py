@@ -22,12 +22,12 @@ from typing import Any
 
 
 SOURCE_REPOSITORY = "https://github.com/williamjblair/formal-conjectures"
-SOURCE_COMMIT = "4b5df9dcc7f7f3458b593aa816b7a2476d71f8e5"
-SOURCE_TREE = "43a629d29b38811bb5dba76c409215ef980ea761"
+SOURCE_COMMIT = "7ef98fa9394b78cda403a40b994b34bb77dd523a"
+SOURCE_TREE = "bf7b593931d9924e25d5c6ff6da5d504c5dcf953"
 VALIDATOR_PATH = "scripts/pr_audit.py"
-VALIDATOR_SHA256 = "b3ec05cda3d1b45ee4c56bf47c8c9005531938feb43df373b6882d28c6a97d60"
+VALIDATOR_SHA256 = "f18be0d9db226e2a5545309287212d49a652d111d032483886f98d4c9f897a66"
 COMPONENTS = {
-    "audit/pr-audit-v1/schemas/formal-conjectures.pr-audit.v1.schema.json": "9a9ae9692d05dac276d3dc04c0eff367b8e02bd41fe78033ff4c244167abd95d",
+    "audit/pr-audit-v1/schemas/formal-conjectures.pr-audit.v1.schema.json": "b5a1b21bbddb3faa8bc81f07f328ff9c523d0744b41a61492441fffe281722bf",
     "audit/pr-audit-v1/schemas/formal-conjectures.pr-audit-observation.v1.schema.json": "5e7ae0ea2d00c5e224a38865b3866b11357a071e71bdc58cfb0d16d6a2a74e7d",
     VALIDATOR_PATH: VALIDATOR_SHA256,
 }
@@ -35,47 +35,47 @@ FIXTURES = {
     "clean-candidate-dean-4878": {
         "pr": 4878,
         "disposition": "inconclusive",
-        "core_root": "sha256:a52aee7bff94c1fff837e7e3cc4f7182bbe0c352e2ffeb85167863ac10bd1c80",
-        "core_sha256": "4847737b7ab384c5b35be195b89de28e3aeb11615194c39e30d9264dfcdf9728",
-        "observation_root": "sha256:ba34c4c71a517f4e462124c239db89138c35d1cbffe75bc63a55510a67465e69",
-        "observation_sha256": "81e76e839a7e59d6ad8361043611d06214b561d4bee14d37fbdb8f0601c9564a",
-        "projection_row_root": "sha256:758bcb452311e35b29200301ffed47aa97d697746ab4982b1f05cf8d2aeabd1c",
+        "core_root": "sha256:d65141b5031c4be8f3e4a811f24ea1aea7161a9ba2e1a79bdf05741f89515726",
+        "core_sha256": "7a9b16a8b78829d7eda0b61d0d6a1233c4d45808f9d6f9030f1f0108b003cb23",
+        "observation_root": "sha256:de8905d8e29026110867f239b70980533e452a195b6471007134d7817fc897a2",
+        "observation_sha256": "5f88700f4156f8abd9b732e4e3e5502dc14d0bf56514abebf7f52f4ed7ec1ee3",
+        "projection_row_root": "sha256:7832e465c0666a98e93fa7bdf04f3db8818a45b9e831f81c638b82409080a501",
     },
     "conditional-erdos-427-4884": {
         "pr": 4884,
         "disposition": "inconclusive",
-        "core_root": "sha256:69c88a3d5fddbc17f3af161bb2ad1341bf5786418f8d1afdf6212a8ed303dee2",
-        "core_sha256": "6d0a0e04f13779755b363f62f4574bfb541f3b666b41f4dca7d86484d92ef764",
-        "observation_root": "sha256:d46096bd9bd3f7086f58a1194f0e3c9b242b5a179d7ba09716d22fc4e8fead0a",
-        "observation_sha256": "5d4baf2f6a4430951283cc0eb389c458c7084af4fa75e0db46888f9a1b3fda9c",
-        "projection_row_root": "sha256:4a14d3e903d2ae3db2ae2d85429aeba4a02744c9a9491215e477518fc3c44ac8",
+        "core_root": "sha256:d8c3bd3cffafe682d642650e5887f9dac11e6834ece33987cada69613ab55c91",
+        "core_sha256": "ddc92a9b88d87201d3a7314c301e06b870d0866da9b23ddc272e3ce97ce107cd",
+        "observation_root": "sha256:923d3111a338add0e2708ef36f897d14074a4bc61914150cf9881019e103a844",
+        "observation_sha256": "0db5936eb77a71708cffc0cd9a1a1145f73bf2eb1ff00a709721afdacf5291af",
+        "projection_row_root": "sha256:f5a6bfba6211fb191fcb39f41835a989a85c2f94bc7fd10ca8d11610c0c3e2b9",
     },
     "fidelity-erdos-887-1237": {
         "pr": 1237,
         "disposition": "needs_revision",
-        "core_root": "sha256:34306610b496d3b5afbe9fe01c3976aa72f62ab133b9877beb26af029535d0af",
-        "core_sha256": "fa099da4957d14c4741b1cc49073b28743ddba6f581f3c516bccbc13a28185a2",
-        "observation_root": "sha256:3b1aef0936751753cfc9b3fa7dad78e7d49555fe9e67ebb40af05003345bf16e",
-        "observation_sha256": "f69ca868835ea6b8ea399e155f70eae5b431d015bcdca3f824a0148f108d83fa",
-        "projection_row_root": "sha256:c47dfef85f305d7722f4850243f72a238c7679f42de0517b25d6bb776d088c8b",
+        "core_root": "sha256:920395cfd8cbed423777c48307e69332209dae2fc7c20f6f86c24316cacbec78",
+        "core_sha256": "31cb417a28a2b03760b96c2a4a6ea4ae4654b2dae9b1a018b68a47b4b277bb34",
+        "observation_root": "sha256:97a26bdc8fcd1db002d4e38bff00595b2d6af144b12b2df1dc671a2824d47033",
+        "observation_sha256": "b340ac212b699d6cc350225fc76f8b636f8dc2ebbb4ef307301be2be9bbf80d7",
+        "projection_row_root": "sha256:94e8cf9d6e2ed7259c398a0b8cc7a2963dc679af92408c045f70b6f983ef70f4",
     },
     "unavailable-rupert-3959": {
         "pr": 3959,
         "disposition": "unavailable",
-        "core_root": "sha256:6e94bebf6986399bc22020ddfd8dc09ae1cc7bd6b714fc49c729b917e200b8c3",
-        "core_sha256": "25db11dd10366895078ae515b6050e5480744ac2be19bfd42eb39ebb5e1e4a46",
-        "observation_root": "sha256:77b96f3f0e7c87fcb69ef7b52559687ed6051b23d2c33249d647a0cd7c035436",
-        "observation_sha256": "5fa29ef0d2a9d408a9ccba91059140ef9ef93954b147f3fd97c79f69e21a6ebe",
-        "projection_row_root": "sha256:77cf24fc379a002d109276f96c6c6245406691b15ba2c62b59906761260b6b41",
+        "core_root": "sha256:83e98c162649e8591782f46396ec954fd98cb27a2b0f6e1098cb0f6d0ca4db88",
+        "core_sha256": "e037df28dfc7a61d5928ba7f79d185397c01d45f2cc94b05a77c325871571a50",
+        "observation_root": "sha256:1abe7bf50c325af82a3147d192d2a1ea6c7cf5642f5821e4049b939d0def2719",
+        "observation_sha256": "f16d91e9993598fc9fabf2264f0a0527f9fd0df94bcb7203233883f950fef8a8",
+        "projection_row_root": "sha256:448538c49200f79181976aa9b6de2b86900dee433608ee5252aa8c939b8da237",
     },
     "vacuity-erdos-80-4830": {
         "pr": 4830,
         "disposition": "needs_revision",
-        "core_root": "sha256:4570618c246c2a6f28d46eab7e0a039f703656a1aaa3a73adc83fdbc009290fc",
-        "core_sha256": "0b87f34de077b63e389cb1e968b3726f124b176dd698b37330f31be9bd6c525c",
-        "observation_root": "sha256:4d23cb7035ae8586083112d619ffa9367f601a725cb51e340770d93c2283b989",
-        "observation_sha256": "d65a6643c6b151581007cf528b6ab51d9cfa8b42642e9972e34053e5a12e9e58",
-        "projection_row_root": "sha256:9b1866618bad34aad33228bd612c5d83deb74517f11ea2b23e162e6b3a370598",
+        "core_root": "sha256:4413e916af0182a397000372ab3af223868ee6217bd38b12ad6c3e2887019e37",
+        "core_sha256": "82a15f505aac7b189b8dc8959beda3a89ca41cc4ccdde10a1eff67202d4734cd",
+        "observation_root": "sha256:74cbd32b7760517bcab78f699584731f23d1569766e6151481a061a60bc91e61",
+        "observation_sha256": "f031d928b573f87d23acb69be62275d574ebedb30be8b7eaa75bd3a5ee76a9e8",
+        "projection_row_root": "sha256:98978b0f17a958ffcc23ffdde8c7113726e12e0981c2e606f7762bc9875743f5",
     },
 }
 SCHEMA = "fc-review-board.pr-audit-projection.v1"

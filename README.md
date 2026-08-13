@@ -85,8 +85,8 @@ Erdős problems.
 ### The exact per-PR audit column
 
 The hosted build checks out the public audit prototype at exact commit
-`4b5df9dcc7f7f3458b593aa816b7a2476d71f8e5` and tree
-`43a629d29b38811bb5dba76c409215ef980ea761`. `fc_pr_audit.py` verifies the
+`7ef98fa9394b78cda403a40b994b34bb77dd523a` and tree
+`bf7b593931d9924e25d5c6ff6da5d504c5dcf953`. `fc_pr_audit.py` verifies the
 validator and schema bytes, validates all five core and observation records,
 checks their pair bindings and roots, and emits a small closed projection. The
 board joins that projection by native pull-request number. Unsupported or
