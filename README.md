@@ -45,7 +45,7 @@ Each row carries CI status, approval count, size, and small flags:
   `formal-conjectures.pr-audit.v1` cases. The label comes from the same
   validated core and observation records used by the native summary, skill,
   evaluation packet, and Vela adapter, and links to the commit-pinned record.
-  `needs revision`, `inconclusive`, and `unavailable` remain distinct; none
+  `clean`, `needs revision`, `inconclusive`, and `unavailable` remain distinct; none
   means approval, merge readiness, mathematical truth, or Repository authority.
 
 Besides the queue there is a **Pick one up** view: the conjecture issues with no
@@ -85,8 +85,8 @@ Erdős problems.
 ### The exact per-PR audit column
 
 The hosted build checks out the public audit prototype at exact commit
-`7ef98fa9394b78cda403a40b994b34bb77dd523a` and tree
-`bf7b593931d9924e25d5c6ff6da5d504c5dcf953`. `fc_pr_audit.py` verifies the
+`50fb575fadfc710f2da66cba1d3909429f9ba25e` and tree
+`7213fa92375028e13797fc89f2cc300fc0568869`. `fc_pr_audit.py` verifies the
 validator and schema bytes, validates all five core and observation records,
 checks their pair bindings and roots, and emits a small closed projection. The
 board joins that projection by native pull-request number. Unsupported or

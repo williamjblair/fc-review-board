@@ -36,7 +36,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           repository: williamjblair/formal-conjectures
-          ref: 7ef98fa9394b78cda403a40b994b34bb77dd523a
+          ref: 50fb575fadfc710f2da66cba1d3909429f9ba25e
           path: .fc-pr-audit-source
           fetch-depth: 1
           persist-credentials: false
@@ -45,8 +45,8 @@ jobs:
         env:
           FC_PR_AUDIT_SOURCE: ${{ github.workspace }}/.fc-pr-audit-source
         run: |
-          test "$(git -C "$FC_PR_AUDIT_SOURCE" rev-parse HEAD)" = 7ef98fa9394b78cda403a40b994b34bb77dd523a
-          test "$(git -C "$FC_PR_AUDIT_SOURCE" rev-parse HEAD^{tree})" = bf7b593931d9924e25d5c6ff6da5d504c5dcf953
+          test "$(git -C "$FC_PR_AUDIT_SOURCE" rev-parse HEAD)" = 50fb575fadfc710f2da66cba1d3909429f9ba25e
+          test "$(git -C "$FC_PR_AUDIT_SOURCE" rev-parse HEAD^{tree})" = 7213fa92375028e13797fc89f2cc300fc0568869
           python3 -B fc_pr_audit.py --source "$FC_PR_AUDIT_SOURCE" --output pr_audits.json
           python3 -B -m unittest -v test_fc_pr_audit.py
 

@@ -30,7 +30,7 @@ class FcPrAuditProjectionTest(unittest.TestCase):
                 1237: "needs_revision",
                 3959: "unavailable",
                 4830: "needs_revision",
-                4878: "inconclusive",
+                4829: "clean",
                 4884: "inconclusive",
             },
         )
@@ -41,12 +41,14 @@ class FcPrAuditProjectionTest(unittest.TestCase):
         )
         self.assertEqual(
             self.projection["root"],
-            "sha256:10b6d9fbdf6e328e26ce129c91a0b2b8f47e6a37324794b598080b751e790fab",
+            "sha256:70795b9827c773958718ff8cbd9a63d7e25bf439db70b7bafcbe3da1c65678ca",
         )
 
-    def test_clean_candidate_is_not_clean_and_unavailable_is_not_failure(self) -> None:
+    def test_clean_source_fidelity_and_unavailable_remain_non_authoritative(self) -> None:
         rows = {row["pull_request"]["number"]: row for row in self.projection["rows"]}
-        self.assertEqual(rows[4878]["advisory_disposition"], "inconclusive")
+        self.assertEqual(rows[4829]["advisory_disposition"], "clean")
+        self.assertIn("source-statement-fidelity", rows[4829]["basis_check_ids"])
+        self.assertIn("not_a_repository_decision_or_standing", rows[4829]["nonclaims"])
         self.assertEqual(rows[3959]["advisory_disposition"], "unavailable")
         outcomes = {check["outcome"] for check in rows[3959]["checks"]}
         self.assertIn("unavailable", outcomes)
