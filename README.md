@@ -95,6 +95,12 @@ drifted records fail the build rather than losing or reinterpreting a status.
 This prototype is program-owned evidence on a contributor fork. It is not an
 upstream Formal Conjectures installation or maintainer decision.
 
+`review_report.py` is a non-live draft of the reader-facing ReviewReport v1
+profile. It validates the same pinned core/observation pair, preserves its
+advisory synthesis byte-for-byte in meaning, and places current GitHub state in
+a separate head-bound observation section. It never derives maintainer
+disposition from the audit, CI, mergeability, or review state.
+
 
 ## How it works
 
