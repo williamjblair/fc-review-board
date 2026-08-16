@@ -101,6 +101,12 @@ advisory synthesis byte-for-byte in meaning, and places current GitHub state in
 a separate head-bound observation section. It never derives maintainer
 disposition from the audit, CI, mergeability, or review state.
 
+An optional `--comparator-json` attachment accepts only the typed
+`formal-conjectures.comparator-outcome.v1` contract. The report binds its
+canonical bytes by SHA-256 and keeps invocation, structured-result parsing,
+and policy outcome separate. An invocation exception therefore remains
+`error` / `not_evaluated`; terminal text can never become a policy failure.
+
 
 ## How it works
 

@@ -85,6 +85,73 @@ class ReviewReportProfileTest(unittest.TestCase):
             with self.assertRaisesRegex(review_report.ReviewReportError, "framed bytes drift"):
                 review_report.build_profile(self.source, fixture)
 
+    @staticmethod
+    def invocation_error() -> dict:
+        return {
+            "schema": "formal-conjectures.comparator-outcome.v1",
+            "authority_effect": "none",
+            "invocation": {
+                "outcome": "error", "reason": "nonzero_exit", "exit_code": 1,
+            },
+            "result_parse": {
+                "outcome": "not_attempted",
+                "reason": "invocation_not_successful",
+            },
+            "policy_result": {"outcome": "not_evaluated"},
+            "terminal_evidence": {
+                "stdout_sha256": "sha256:" + "0" * 64,
+                "stderr_sha256": "sha256:" + "1" * 64,
+                "stdout_bytes": 0,
+                "stderr_bytes": 31,
+            },
+            "nonclaims": [
+                "not_an_acceptance_or_merge_decision",
+                "not_a_claim_of_mathematical_truth",
+                "terminal_text_was_not_used_as_a_property_verdict",
+            ],
+        }
+
+    def test_typed_invocation_error_stays_not_evaluated_and_hash_bound(self) -> None:
+        outcome = self.invocation_error()
+        profile = review_report.build_profile(
+            self.source, "conditional-erdos-427-4884",
+            comparator_outcome=outcome)
+        evidence = profile["comparator_evidence"]
+        self.assertRegex(evidence["canonical_sha256"], r"^sha256:[0-9a-f]{64}$")
+        self.assertEqual(
+            evidence["typed_outcome"]["policy_result"]["outcome"],
+            "not_evaluated",
+        )
+        self.assertIsNone(profile["maintainer_disposition"])
+
+    def test_terminal_exception_cannot_be_relabelled_as_policy_fail(self) -> None:
+        outcome = self.invocation_error()
+        outcome["policy_result"] = {
+            "schema": "formal-conjectures.comparator-result.v1",
+            "property": "statement_equivalence_and_permitted_axioms",
+            "outcome": "fail",
+            "witnesses": ["terminal text said illegal axiom"],
+        }
+        with self.assertRaisesRegex(
+            review_report.ReviewReportError, "cannot produce a parsed policy verdict"
+        ):
+            review_report.build_profile(
+                self.source, "conditional-erdos-427-4884",
+                comparator_outcome=outcome)
+
+    def test_structured_policy_failure_requires_a_witness(self) -> None:
+        outcome = self.invocation_error()
+        outcome["invocation"] = {"outcome": "pass", "exit_code": 0}
+        outcome["result_parse"] = {"outcome": "pass"}
+        outcome["policy_result"] = {
+            "schema": "formal-conjectures.comparator-result.v1",
+            "property": "statement_equivalence_and_permitted_axioms",
+            "outcome": "fail",
+            "witnesses": [],
+        }
+        with self.assertRaisesRegex(review_report.ReviewReportError, "requires a witness"):
+            review_report.validate_comparator_outcome(outcome)
+
 
 if __name__ == "__main__":
     unittest.main()
