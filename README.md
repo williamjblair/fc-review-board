@@ -11,11 +11,13 @@ for one selected calibration case. The existing queue remains available so
 maintainers can see what is ready for review, what is waiting on its author,
 and what has been waiting longest.
 
-**Live:** https://williamjblair.github.io/fc-review-board
+**Live:** https://williamjblair.github.io/open-formal-workflows/
 
 Open Formal Workflows is the pilot program name; this deployment is scoped to
-Formal Conjectures review, verification, and preservation. The repository name
-and public URL remain `fc-review-board` for continuity.
+Formal Conjectures review, verification, and preservation. The repository and
+public deployment use the `open-formal-workflows` slug. The legacy
+`fc-review-board.pr-audit-projection.v1` schema identifier remains stable for
+evidence-consumer compatibility.
 
 This is a proof-of-concept and a neutral tool. It is not affiliated with the
 formal-conjectures maintainers, and where and how a board like this should live

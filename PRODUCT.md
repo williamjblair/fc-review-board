@@ -6,9 +6,10 @@
 
 **Deployment subtitle:** Formal Conjectures · Review, Verification & Preservation
 
-The repository and public URL retain the historical `fc-review-board` slug.
-The name does not imply Formal Conjectures maintainer endorsement or transfer
-authority away from the upstream repository.
+The repository and public deployment use the `open-formal-workflows` slug. The
+legacy `fc-review-board.pr-audit-projection.v1` schema identifier remains stable
+for evidence-consumer compatibility. The name does not imply Formal Conjectures
+maintainer endorsement or transfer authority away from the upstream repository.
 
 ## Register
 

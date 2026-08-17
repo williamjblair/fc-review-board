@@ -60,7 +60,8 @@ FRONTIER_URL = AUDIT_SITE
 METHOD_URL = (AUDIT_SITE + "/method.html") if AUDIT_SITE else ""
 FC_REPO_URL = f"https://github.com/{REPO}"
 FC_SITE_URL = "https://google-deepmind.github.io/formal-conjectures"
-BOARD_REPO_URL = "https://github.com/williamjblair/fc-review-board"
+BOARD_REPO_URL = "https://github.com/williamjblair/open-formal-workflows"
+BOARD_SITE_URL = "https://williamjblair.github.io/open-formal-workflows/"
 
 # --- data -----------------------------------------------------------------
 # PR state comes from queueboard, the same tool mathlib's review dashboard is
@@ -466,6 +467,7 @@ def main() -> None:
            .replace("__FC_REPO__", FC_REPO_URL)
            .replace("__FC_SITE__", FC_SITE_URL)
            .replace("__BOARD_REPO__", BOARD_REPO_URL)
+           .replace("__BOARD_SITE__", BOARD_SITE_URL)
            .replace("__METHOD__", METHOD_URL)
            .replace("__FRONTIER__", FRONTIER_URL)
            .replace("__PR_AUDIT_NOTE__", (
@@ -496,8 +498,10 @@ TEMPLATE = r"""<!doctype html>
 <title>Open Formal Workflows | Formal Conjectures Review, Verification &amp; Preservation</title>
 <meta name="application-name" content="Open Formal Workflows">
 <meta name="description" content="Formal Conjectures review, verification, and preservation pilot. Advisory evidence only; Formal Conjectures retains authority.">
+<link rel="canonical" href="__BOARD_SITE__">
 <meta property="og:title" content="Open Formal Workflows | Formal Conjectures Review, Verification &amp; Preservation">
 <meta property="og:description" content="A bounded advisory evidence pilot for Formal Conjectures review, verification, and preservation.">
+<meta property="og:url" content="__BOARD_SITE__">
 <style>
 :root {
   /* Restrained evidence palette: cool paper, one blue link accent, and semantic
