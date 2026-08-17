@@ -1,0 +1,17 @@
+{
+  "authority_effect": "none",
+  "formal_conjectures_revision": "2411d22e1bd550d050d0eac6c1fb379a76a3e7c5",
+  "input_sha256": "sha256:792a4b5fab29e5855fbcb1115d54e28a054d8fcf7ee2bd5589834a73b387c052",
+  "mathlib_revision": "a3a10db0e9d66acbebf76c5e6a135066525ac900",
+  "schema": "formal-conjectures.calibration-preparation.v1",
+  "source_head": "1f7b8ac102bbcac443288bc2f0620084db57422c",
+  "workspace_files": {
+    "Challenge.lean": "sha256:5225dd59a58768a97a9a3d113a21e87af326371755fbe1a780771eee7c24fa77",
+    "Solution.lean": "sha256:9206535818a4781a01a49c1b89230c910bf7703fac15db7f835352ca44278e1f",
+    "Submission.lean": "sha256:d9a8de79323786f8ff9bbdd766bd9505ba14f33e8c3492b925e34f341caa598d",
+    "Submission/External.lean": "sha256:7556eb344963b568b4e0c393666f623877a97e2c6342583b6739b0c2ff5114ac",
+    "config.json": "sha256:1e7afaae1b3a64bf2e51f3d2d2ad3f5a49a8563b76d7f181b8672da7f9887dbd",
+    "lakefile.toml": "sha256:fd5d559680891882535ffc18290d1c465f8ca05154dcbd39532b0afde206432c",
+    "lean-toolchain": "sha256:e695e6e5d8e7a8be4d6cf159dfb995847993d26c6cc450353a86f387279025b9"
+  }
+}

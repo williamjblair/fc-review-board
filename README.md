@@ -1,20 +1,58 @@
-# formal-conjectures review board
+# Open Formal Workflows
 
-A review-queue dashboard for the open pull requests on
+**Formal Conjectures · Review, Verification & Preservation**
+
+A bounded review-evidence pilot plus review-queue dashboard for open pull requests on
 [google-deepmind/formal-conjectures](https://github.com/google-deepmind/formal-conjectures),
 in the spirit of mathlib's [queueboard](https://leanprover-community.github.io/queueboard/).
-It turns the open PRs into one page so maintainers can see what is ready to
-review, what is waiting on its author, and what has been waiting longest.
+The default view follows the review, verification, and preservation loop in
+[Formal Conjectures issue #4394](https://github.com/google-deepmind/formal-conjectures/issues/4394)
+for one selected calibration case. The existing queue remains available so
+maintainers can see what is ready for review, what is waiting on its author,
+and what has been waiting longest.
 
 **Live:** https://williamjblair.github.io/fc-review-board
+
+Open Formal Workflows is the pilot program name; this deployment is scoped to
+Formal Conjectures review, verification, and preservation. The repository name
+and public URL remain `fc-review-board` for continuity.
 
 This is a proof-of-concept and a neutral tool. It is not affiliated with the
 formal-conjectures maintainers, and where and how a board like this should live
 is their call.
 
+Formal Conjectures remains canonical for declarations, PR state, CI, and
+maintainer decisions. This board is an advisory projection. Its checks,
+ReviewReport, queue labels, and external execution evidence cannot set approval,
+merge acceptance, or mathematical truth. Vela/problems.science may later link
+to the evidence, but it is not an authority input here.
+
+## The bounded pilot
+
+The selected case is public PR
+[#4884](https://github.com/google-deepmind/formal-conjectures/pull/4884),
+`Erdos427.erdos_427`. It is a useful negative calibration because the linked
+proof declares a Shiu-theorem condition and the retained Comparator replay
+ended with an invocation `error`. The typed result keeps result parsing
+`not_attempted` and axiom policy `not_evaluated`; terminal text is retained by
+hash but never converted into a failing property verdict.
+
+The Pilot view collects, without merging their meanings:
+
+- the exact FC PR head, source file, linked proof, audit core, and observation;
+- a derived LeanEval-shaped multi-file profile with exact interface and tool pins;
+- content-addressed preparation files, execution image, stdout, and stderr;
+- typed audit and Comparator outcomes;
+- a fresh GitHub head observation, rendered as current or stale; and
+- an advisory ReviewReport whose maintainer disposition is always unfilled.
+
+The Method view states the loop, non-goals, and what an independent pilot would
+need to demonstrate. No reviewer buy-in, upstream adoption, partner status, or
+Econlib integration is claimed.
+
 ## What it shows
 
-PRs are grouped into approved / ready-for-review / waiting-on-author / draft.
+PRs are grouped into approval-recorded / ready-for-review / waiting-on-author / draft.
 Ready-for-review sorts by **waiting** time, not by age: a pull request that sat
 with its author for two months and has been on the queue for a week ranks below
 one that has waited a fortnight throughout. The author and draft groups sort by
@@ -95,8 +133,9 @@ drifted records fail the build rather than losing or reinterpreting a status.
 This prototype is program-owned evidence on a contributor fork. It is not an
 upstream Formal Conjectures installation or maintainer decision.
 
-`review_report.py` is a non-live draft of the reader-facing ReviewReport v1
-profile. It validates the same pinned core/observation pair, preserves its
+`review_report.py` builds and validates the reader-facing ReviewReport v1
+profile used by the bounded pilot. It validates the same pinned
+core/observation pair, preserves its
 advisory synthesis byte-for-byte in meaning, and places current GitHub state in
 a separate head-bound observation section. It never derives maintainer
 disposition from the audit, CI, mergeability, or review state.
@@ -114,6 +153,12 @@ content-addressed results. Kind is not a quality score, and neither kind can
 set maintainer disposition. The report uses source-owned Git provenance; it
 does not add an attempt, session, or parallel memory system.
 
+`pilot.py` validates the generated ReviewReport again at the file/render
+boundary, binds it to the retained files under `pilot/`, and fails closed on
+component drift, a mismatched #4884 identity, or any filled maintainer
+disposition. The scheduled build refreshes the GitHub observation and rebuilds
+this projection on every run.
+
 
 ## How it works
 
@@ -121,8 +166,11 @@ PR state comes from [queueboard](https://github.com/leanprover-community/queuebo
 the tool mathlib's own review dashboard is built on. `sync.sh` clones it,
 repoints three mathlib-specific constants (default branch, and two hardcoded
 mathlib4 URLs), runs its pipeline against formal-conjectures and writes
-`snapshot.json`. `generate.py` reads that plus the audit feed and writes a
-single self-contained `index.html`.
+`snapshot.json`. The scheduled build also refreshes #4884's GitHub head,
+rebuilds its ReviewReport from the exact audit checkout and retained typed
+Comparator outcome, and validates the pilot component bindings. `generate.py`
+reads those projections plus the optional audit feed and writes a single
+self-contained `index.html`.
 
 Leaning on queueboard means the parts that break when GitHub changes a response
 shape, or when the repository adopts a new label, are maintained upstream. What

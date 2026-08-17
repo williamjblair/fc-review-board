@@ -37,6 +37,21 @@ REVIEWER_ATTRIBUTION_FIELDS = {
     "independence", "shared_dependencies", "results",
 }
 GIT_EVIDENCE_FIELDS = {"repository", "commit_oid", "path", "sha256"}
+PROFILE_FIELDS = {
+    "schema", "authority_effect", "immutable_audit",
+    "current_github_observation", "comparator_evidence",
+    "reviewer_attributions", "maintainer_disposition", "separation",
+    "nonclaims",
+}
+REQUIRED_SEPARATION = {
+    "advisory_is_not_maintainer_disposition",
+    "github_state_does_not_change_advisory_synthesis",
+    "head_mismatch_is_rendered_as_stale_not_reinterpreted",
+    "comparator_evidence_does_not_set_maintainer_disposition",
+    "terminal_text_is_never_a_policy_verdict",
+    "reviewer_kind_is_attribution_not_quality",
+    "review_evidence_does_not_set_maintainer_disposition",
+}
 
 
 def _canonical_sha256(value: Any) -> str:
@@ -222,6 +237,110 @@ def validate_current_github(value: Any, *, pr: dict[str, Any]) -> dict[str, Any]
     return dict(value)
 
 
+def validate_profile(value: Any) -> dict[str, Any]:
+    """Validate a rendered ReviewReport without recreating source authority.
+
+    The builder validates the pinned source records. This validator protects the
+    board's later file boundary, where a generated report is loaded and rendered.
+    It checks the report's separations and internal bindings rather than treating
+    the report as a new canonical record.
+    """
+    if not isinstance(value, dict) or set(value) != PROFILE_FIELDS:
+        raise ReviewReportError("invalid ReviewReport profile fields")
+    if value["schema"] != "formal-conjectures.review-report-profile.v1":
+        raise ReviewReportError("unsupported ReviewReport profile schema")
+    if value["authority_effect"] != "none":
+        raise ReviewReportError("ReviewReport cannot have authority effect")
+    if value["maintainer_disposition"] is not None:
+        raise ReviewReportError("generated ReviewReport cannot set maintainer disposition")
+
+    immutable = value["immutable_audit"]
+    required_immutable = {
+        "source_url", "repository", "pull_request", "base", "head",
+        "core", "observation", "checks", "advisory_synthesis",
+    }
+    if not isinstance(immutable, dict) or set(immutable) != required_immutable:
+        raise ReviewReportError("invalid immutable audit profile fields")
+    pr = immutable["pull_request"]
+    if not isinstance(pr, dict) or set(pr) != {"number", "url"}:
+        raise ReviewReportError("invalid immutable pull-request identity")
+    for side in ("base", "head"):
+        revision = immutable[side]
+        if not isinstance(revision, dict) or set(revision) != {
+            "commit_oid", "tree_oid",
+        } or not all(
+            isinstance(revision[key], str)
+            and re.fullmatch(r"[0-9a-f]{40}", revision[key])
+            for key in revision
+        ):
+            raise ReviewReportError(f"invalid immutable {side} revision")
+    for record in ("core", "observation"):
+        binding = immutable[record]
+        if not isinstance(binding, dict) or set(binding) != {"root", "sha256"}:
+            raise ReviewReportError(f"invalid immutable {record} binding")
+        if not all(
+            isinstance(binding[key], str)
+            and re.fullmatch(r"sha256:[0-9a-f]{64}", binding[key])
+            for key in binding
+        ):
+            raise ReviewReportError(f"invalid immutable {record} digest")
+    if not isinstance(immutable["checks"], list) or not immutable["checks"]:
+        raise ReviewReportError("immutable audit must include typed checks")
+    for check in immutable["checks"]:
+        if not isinstance(check, dict) or set(check) != {
+            "id", "kind", "property", "outcome", "severity",
+        } or check["outcome"] not in {
+            "pass", "fail", "inconclusive", "error", "unavailable",
+        }:
+            raise ReviewReportError("invalid immutable typed check")
+    synthesis = immutable["advisory_synthesis"]
+    if not isinstance(synthesis, dict) or synthesis.get("advisory") not in {
+        "clean", "needs_revision", "inconclusive", "unavailable",
+    }:
+        raise ReviewReportError("invalid advisory synthesis")
+
+    current = value["current_github_observation"]
+    if current is not None:
+        if not isinstance(current, dict) or current.get("authority") != (
+            "github_observation_only"
+        ):
+            raise ReviewReportError("invalid current GitHub observation boundary")
+        core_current = {key: current[key] for key in current if key in CURRENT_GITHUB_FIELDS}
+        validate_current_github(core_current, pr=pr)
+        matches = current.get("head_commit_oid") == immutable["head"]["commit_oid"]
+        if current.get("matches_core_head") is not matches or current.get(
+            "freshness"
+        ) != ("current" if matches else "stale"):
+            raise ReviewReportError("invalid current GitHub freshness binding")
+
+    comparator = value["comparator_evidence"]
+    if comparator is not None:
+        if not isinstance(comparator, dict) or set(comparator) != {
+            "canonical_sha256", "typed_outcome", "authority",
+        } or comparator["authority"] != "advisory_execution_evidence_only":
+            raise ReviewReportError("invalid Comparator evidence boundary")
+        typed = validate_comparator_outcome(comparator["typed_outcome"])
+        if comparator["canonical_sha256"] != _canonical_sha256(typed):
+            raise ReviewReportError("Comparator canonical binding mismatch")
+
+    reviewers = value["reviewer_attributions"]
+    if reviewers is not None:
+        validate_reviewer_attributions(reviewers)
+    separation = value["separation"]
+    if not isinstance(separation, dict) or set(separation) != REQUIRED_SEPARATION or (
+        not all(flag is True for flag in separation.values())
+    ):
+        raise ReviewReportError("ReviewReport separation boundary is incomplete")
+    nonclaims = value["nonclaims"]
+    if not isinstance(nonclaims, list) or not {
+        "not_an_acceptance_or_merge_decision",
+        "not_a_claim_of_mathematical_truth",
+        "not_an_independent_review_board_verdict",
+    } <= set(nonclaims):
+        raise ReviewReportError("ReviewReport nonclaims are incomplete")
+    return json.loads(json.dumps(value))
+
+
 def build_profile(source: Path, fixture: str,
                   current_github: dict[str, Any] | None = None,
                   comparator_outcome: dict[str, Any] | None = None,
@@ -294,7 +413,7 @@ def build_profile(source: Path, fixture: str,
     if reviewer_attributions is not None:
         reviewers = validate_reviewer_attributions(reviewer_attributions)
 
-    return {
+    profile = {
         "schema": "formal-conjectures.review-report-profile.v1",
         "authority_effect": "none",
         "immutable_audit": immutable,
@@ -316,6 +435,7 @@ def build_profile(source: Path, fixture: str,
             "not_an_independent_review_board_verdict",
         ])),
     }
+    return validate_profile(profile)
 
 
 def main() -> None:
@@ -326,6 +446,7 @@ def main() -> None:
     parser.add_argument("--github-json", type=Path)
     parser.add_argument("--comparator-json", type=Path)
     parser.add_argument("--reviewer-attributions-json", type=Path)
+    parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     current = json.loads(args.github_json.read_text()) if args.github_json else None
     comparator = (
@@ -335,9 +456,13 @@ def main() -> None:
         json.loads(args.reviewer_attributions_json.read_text())
         if args.reviewer_attributions_json else None
     )
-    print(json.dumps(
+    rendered = json.dumps(
         build_profile(args.source, args.fixture, current, comparator, reviewers),
-        indent=2, sort_keys=True))
+        indent=2, sort_keys=True) + "\n"
+    if args.output:
+        args.output.write_text(rendered)
+    else:
+        print(rendered, end="")
 
 
 if __name__ == "__main__":

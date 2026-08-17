@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-17T22:40:00Z",
+  "title": "Design System: Open Formal Workflows: Formal Conjectures Review, Verification & Preservation",
+  "extensions": {
+    "colorMeta": {
+      "evidence-blue": {
+        "role": "primary",
+        "displayName": "Evidence Blue",
+        "canonical": "oklch(40% 0.072 252)",
+        "tonalRamp": ["oklch(15% 0.03 252)", "oklch(25% 0.05 252)", "oklch(35% 0.065 252)", "oklch(45% 0.072 252)", "oklch(57% 0.065 252)", "oklch(70% 0.05 252)", "oklch(84% 0.025 252)", "oklch(95% 0.009 252)"]
+      },
+      "paper-blue": {
+        "role": "neutral",
+        "displayName": "Paper Blue",
+        "canonical": "oklch(97.2% 0.008 248)",
+        "tonalRamp": ["oklch(15% 0.008 248)", "oklch(27% 0.008 248)", "oklch(39% 0.008 248)", "oklch(52% 0.008 248)", "oklch(65% 0.008 248)", "oklch(77% 0.008 248)", "oklch(89% 0.008 248)", "oklch(97.2% 0.008 248)"]
+      },
+      "ink-primary": {
+        "role": "neutral",
+        "displayName": "Primary Ink",
+        "canonical": "oklch(20% 0.030 262)",
+        "tonalRamp": ["oklch(15% 0.03 262)", "oklch(25% 0.028 262)", "oklch(37% 0.024 262)", "oklch(49% 0.02 262)", "oklch(61% 0.016 262)", "oklch(73% 0.013 262)", "oklch(85% 0.01 262)", "oklch(95% 0.006 262)"]
+      },
+      "outcome-pass": {
+        "role": "semantic",
+        "displayName": "Checked Pass",
+        "canonical": "oklch(52% 0.075 145)",
+        "tonalRamp": ["oklch(15% 0.03 145)", "oklch(27% 0.05 145)", "oklch(39% 0.065 145)", "oklch(52% 0.075 145)", "oklch(64% 0.065 145)", "oklch(76% 0.05 145)", "oklch(87% 0.028 145)", "oklch(95% 0.01 145)"]
+      },
+      "outcome-error": {
+        "role": "semantic",
+        "displayName": "Typed Error",
+        "canonical": "oklch(52% 0.12 34)",
+        "tonalRamp": ["oklch(15% 0.04 34)", "oklch(27% 0.075 34)", "oklch(39% 0.1 34)", "oklch(52% 0.12 34)", "oklch(64% 0.1 34)", "oklch(76% 0.075 34)", "oklch(87% 0.04 34)", "oklch(95% 0.015 34)"]
+      }
+    },
+    "typographyMeta": {
+      "headline": {"displayName": "Case Headline", "purpose": "Exact selected case identity."},
+      "body": {"displayName": "Evidence Body", "purpose": "Claims, limitations, and method copy."},
+      "label": {"displayName": "Protocol Label", "purpose": "Authority and provenance context."}
+    },
+    "shadows": [
+      {"name": "active-tab", "value": "0 1px 2px color-mix(in oklab, var(--ink0) 12%, transparent)", "purpose": "Active state inside the tab rail."},
+      {"name": "filter-menu", "value": "0 8px 24px color-mix(in oklab, var(--ink0) 18%, transparent)", "purpose": "Transient filter popover only."}
+    ],
+    "motion": [
+      {"name": "state-fast", "value": "120ms ease-out", "purpose": "Hover, active, and menu state transitions."}
+    ],
+    "breakpoints": [
+      {"name": "narrow", "value": "600px"}
+    ]
+  },
+  "components": [
+    {
+      "name": "Active Tab",
+      "kind": "nav",
+      "refersTo": "tab-active",
+      "description": "Current evidence view inside the compact tab rail.",
+      "html": "<button class=\"ds-tab-active\" aria-selected=\"true\">Pilot</button>",
+      "css": ".ds-tab-active { font: 640 13px/1.5 system-ui, sans-serif; padding: 4px 13px; border: 0; border-radius: 7px; background: var(--card); color: var(--ink0); box-shadow: 0 1px 2px color-mix(in oklab, var(--ink0) 12%, transparent); } .ds-tab-active:hover { color: var(--accent); } .ds-tab-active:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }"
+    },
+    {
+      "name": "Current Status Chip",
+      "kind": "chip",
+      "refersTo": "status-chip",
+      "description": "Text plus color marker for evidence freshness.",
+      "html": "<span class=\"ds-state-current\"><span aria-hidden=\"true\"></span>Evidence head current</span>",
+      "css": ".ds-state-current { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border: 1px solid var(--rule2); border-radius: 999px; background: var(--card); color: var(--ink1); font: 640 11.5px/1.5 system-ui, sans-serif; } .ds-state-current span { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }"
+    },
+    {
+      "name": "Search Input",
+      "kind": "input",
+      "refersTo": "search-input",
+      "description": "Familiar queue search field with restrained focus.",
+      "html": "<input class=\"ds-search\" type=\"search\" placeholder=\"Search #, title, author\" aria-label=\"Search pull requests\">",
+      "css": ".ds-search { width: 230px; padding: 6px 11px; border: 1px solid var(--rule2); border-radius: 8px; background: var(--card); color: var(--ink0); font: 13px/1.5 system-ui, sans-serif; } .ds-search:hover { border-color: var(--ink2); } .ds-search:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }"
+    },
+    {
+      "name": "Authority Boundary",
+      "kind": "custom",
+      "description": "Persistent scope statement above every view.",
+      "html": "<div class=\"ds-boundary\"><strong>Authority boundary</strong><span>Formal Conjectures owns declarations, PR state, CI, and maintainer decisions.</span></div>",
+      "css": ".ds-boundary { display: flex; align-items: flex-start; gap: 12px; padding: 11px 13px; border: 1px solid var(--rule2); border-radius: 10px; background: color-mix(in oklab, var(--accent) 5%, var(--card)); color: var(--ink1); font: 12.5px/1.5 system-ui, sans-serif; } .ds-boundary strong { color: var(--ink0); font-size: 12px; letter-spacing: .035em; text-transform: uppercase; }"
+    },
+    {
+      "name": "Evidence Row",
+      "kind": "custom",
+      "description": "Claim, source with limitation, and typed outcome in reading order.",
+      "html": "<div class=\"ds-evidence-row\"><strong>Comparator invocation</strong><span><a href=\"#\">Pinned execution source</a><small>nonzero_exit; exit code 1</small></span><b><i aria-hidden=\"true\"></i>error</b></div>",
+      "css": ".ds-evidence-row { display: grid; grid-template-columns: .8fr 2fr .7fr; gap: 20px; padding: 14px 0; border-bottom: 1px solid var(--rule); color: var(--ink1); font: 14px/1.5 system-ui, sans-serif; } .ds-evidence-row strong { color: var(--ink0); } .ds-evidence-row small { display: block; color: var(--ink2); } .ds-evidence-row b { display: inline-flex; align-items: center; gap: 7px; color: var(--bad); font-size: 12px; } .ds-evidence-row i { width: 8px; height: 8px; border-radius: 50%; background: var(--bad); } .ds-evidence-row a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Evidence Notebook",
+    "overview": "A well-kept technical notebook opened beside a pull request: calm, dense, and explicit about which observations are checked, derived, stale, or absent. The interface serves reviewers and never turns a diagnostic into a decision.",
+    "keyCharacteristics": ["Forensic, calm, accountable", "Exact identities before interpretation", "Unknown states remain visible", "Flat structure with rhythmic rules", "Responsive without page overflow"],
+    "rules": [
+      {"name": "The Evidence Color Rule", "body": "Semantic color describes only the state named beside it and never implies acceptance.", "section": "colors"},
+      {"name": "The Identity First Rule", "body": "PRs, declarations, commits, roots, and paths remain readable text.", "section": "typography"},
+      {"name": "The Flat Evidence Rule", "body": "Evidence rows, reports, and method steps use rules, not decorative shadow or glass.", "section": "elevation"}
+    ],
+    "dos": ["Do keep Formal Conjectures authority visible", "Do show exact source and environment identities close to claims", "Do preserve error, unavailable, stale, and not-evaluated as distinct states"],
+    "donts": ["Don't resemble a generic AI-agent control plane", "Don't collapse evidence into approval or merge readiness", "Don't create a Vela-owned source of truth", "Don't show fake partner or Econlib integration logos"]
+  }
+}

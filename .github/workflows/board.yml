@@ -50,6 +50,31 @@ jobs:
           python3 -B fc_pr_audit.py --source "$FC_PR_AUDIT_SOURCE" --output pr_audits.json
           python3 -B -m unittest -v test_fc_pr_audit.py
 
+      - name: Build the bounded #4884 pilot report
+        env:
+          FC_PR_AUDIT_SOURCE: ${{ github.workspace }}/.fc-pr-audit-source
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          observed_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          gh pr view 4884 --repo google-deepmind/formal-conjectures \
+            --json number,headRefOid,state,reviewDecision,url \
+            | jq --arg observed_at "$observed_at" '{
+                number,
+                head_commit_oid: .headRefOid,
+                state,
+                review_decision: (.reviewDecision // null),
+                observed_at: $observed_at,
+                repository: "google-deepmind/formal-conjectures",
+                url
+              }' > pilot_github.json
+          python3 -B review_report.py "$FC_PR_AUDIT_SOURCE" \
+            conditional-erdos-427-4884 \
+            --github-json pilot_github.json \
+            --comparator-json pilot/comparator-outcome.json \
+            --output pilot_review_report.json
+          python3 -B -c 'import pilot; assert pilot.load_pilot_bundle()'
+          python3 -B -m unittest -v test_review_report.py test_pilot.py
+
       # No audit feed by default. Set a VERDICTS_URL repository variable to
       # point at one and the fidelity column appears; without it the board
       # depends on nothing but GitHub.

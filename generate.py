@@ -218,6 +218,18 @@ def load_pr_audits() -> dict[int, dict]:
     return {row["pull_request"]["number"]: row for row in data["rows"]}
 
 
+def load_pilot() -> dict | None:
+    """Load the validated one-case pilot projection when its report is present.
+
+    The scheduled build creates the report from the pinned audit source and a
+    fresh GitHub observation. Component byte drift or a filled maintainer
+    disposition fails the build instead of being rendered.
+    """
+    from pilot import load_pilot_bundle
+
+    return load_pilot_bundle()
+
+
 # --- classification -------------------------------------------------------
 # Buckets, CI state and idle time are queueboard's, not ours. What stays here
 # is the FC-specific reading: whether a PR touches a statement file, and how
@@ -424,6 +436,7 @@ def main() -> None:
     basics = load_basics()
     verdicts = load_verdicts()
     pr_audits = load_pr_audits()
+    pilot_bundle = load_pilot()
     approved = set(snap.get("lists", {}).get("dashboards", {}).get("Approved") or [])
     now = datetime.now(timezone.utc)
     on_main = main_paths()
@@ -438,12 +451,14 @@ def main() -> None:
         "generated": now.strftime("%Y-%m-%d %H:%M UTC"),
         "repo": REPO, "hasAudit": bool(verdicts),
         "hasPrAudit": bool(joined_pr_audits), "hasPrAuditFeed": bool(pr_audits),
-        "hasIssues": bool(issues),
+        "hasIssues": bool(issues), "hasPilot": pilot_bundle is not None,
     }
     data = json.dumps(records, ensure_ascii=False).replace("</", "<\\/")
     doc = (TEMPLATE
            .replace("__DATA__", data)
            .replace("__PR_AUDITS__", json.dumps(list(pr_audits.values()), ensure_ascii=False)
+                    .replace("</", "<\\/"))
+           .replace("__PILOT__", json.dumps(pilot_bundle, ensure_ascii=False)
                     .replace("</", "<\\/"))
            .replace("__ISSUES__", json.dumps(issues, ensure_ascii=False).replace("</", "<\\/"))
            .replace("__META__", json.dumps(meta).replace("</", "<\\/"))
@@ -478,11 +493,15 @@ TEMPLATE = r"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title>formal-conjectures &middot; review queue</title>
+<title>Open Formal Workflows | Formal Conjectures Review, Verification &amp; Preservation</title>
+<meta name="application-name" content="Open Formal Workflows">
+<meta name="description" content="Formal Conjectures review, verification, and preservation pilot. Advisory evidence only; Formal Conjectures retains authority.">
+<meta property="og:title" content="Open Formal Workflows | Formal Conjectures Review, Verification &amp; Preservation">
+<meta property="og:description" content="A bounded advisory evidence pilot for Formal Conjectures review, verification, and preservation.">
 <style>
 :root {
-  /* Constellate / Vela canonical tokens (colours only, no branding) — matched to
-     erdos-frontier so the trust vocabulary renders identically across both. */
+  /* Restrained evidence palette: cool paper, one blue link accent, and semantic
+     colors reserved for typed outcomes and freshness. */
   --paper: oklch(97.2% 0.008 248); --panel: oklch(93.4% 0.011 250); --card: oklch(99.2% 0.004 248);
   --ink0: oklch(20% 0.030 262); --ink1: oklch(38% 0.026 258); --ink2: oklch(54% 0.018 252);
   --rule: color-mix(in oklab, var(--ink0) 12%, transparent);
@@ -497,7 +516,7 @@ TEMPLATE = r"""<!doctype html>
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Observatory night — deep prussian indigo; gold stays the one warm light. */
+    /* The same evidence hierarchy in low ambient light. */
     --paper: oklch(17.4% 0.024 252); --panel: oklch(22% 0.026 254); --card: oklch(20.6% 0.024 253);
     --ink0: oklch(92% 0.012 258); --ink1: oklch(74% 0.016 256); --ink2: oklch(60% 0.016 256);
     --rule: color-mix(in oklab, var(--ink0) 16%, transparent);
@@ -512,6 +531,7 @@ TEMPLATE = r"""<!doctype html>
   }
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body { margin: 0; background: var(--paper); color: var(--ink0);
   font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased; }
@@ -521,12 +541,20 @@ a { color: var(--accent); }
 
 header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 20px;
   margin-bottom: 14px; }
-h1 { font-size: 23px; font-weight: 640; letter-spacing: -.015em; margin: 0; }
-h1 .h1-sub { color: var(--ink2); font-weight: 460; }
+h1 { display: flex; flex-direction: column; gap: 1px; margin: 0; }
+h1 .product-name { font-size: 23px; font-weight: 660; letter-spacing: -.015em; }
+h1 .h1-sub { color: var(--ink2); font-size: 13.5px; font-weight: 500; letter-spacing: .005em; }
 .meta { margin-left: auto; font-size: 12.5px; color: var(--ink2); }
 .meta a { color: var(--ink1); text-decoration: none; border-bottom: 1px solid var(--rule2); }
 .meta a:hover { color: var(--accent); border-color: var(--accent); }
 .sep { margin: 0 8px; color: var(--rule2); }
+.boundary { display: flex; align-items: flex-start; gap: 12px; margin: 0 0 18px;
+  padding: 11px 13px; border: 1px solid var(--rule2); border-radius: 10px;
+  background: color-mix(in oklab, var(--accent) 5%, var(--card)); color: var(--ink1); }
+.boundary strong { color: var(--ink0); font-size: 12px; letter-spacing: .035em;
+  text-transform: uppercase; white-space: nowrap; }
+.boundary span { max-width: 78ch; font-size: 12.5px; }
+.boundary a { white-space: nowrap; }
 
 /* Overview: a slim typographic row, not a filled card. */
 .strip { display: flex; flex-wrap: wrap; align-items: baseline; gap: 9px 22px;
@@ -586,10 +614,10 @@ h1 .h1-sub { color: var(--ink2); font-weight: 460; }
 .cdot--stone { background: color-mix(in oklab, var(--stone) 42%, transparent); }
 .cdot--gold { background: var(--gold-glow); border-color: color-mix(in oklab, var(--gold) 55%, transparent); }
 .cdot--cinnabar { background: color-mix(in oklab, var(--cinnabar) 45%, transparent); }
-.tabs { display: flex; gap: 3px; background: var(--panel); border: 1px solid var(--rule);
-  border-radius: 9px; padding: 3px; }
+.tabs { display: flex; max-width: 100%; gap: 3px; overflow-x: auto; background: var(--panel);
+  border: 1px solid var(--rule); border-radius: 9px; padding: 3px; }
 .tab { font: inherit; font-size: 13px; padding: 4px 13px; border-radius: 7px; border: 0;
-  background: none; color: var(--ink1); cursor: pointer; transition: all .12s ease; }
+  background: none; color: var(--ink1); cursor: pointer; white-space: nowrap; transition: all .12s ease; }
 .tab:hover { color: var(--ink0); }
 .tab.active { background: var(--card); color: var(--ink0); font-weight: 640;
   box-shadow: 0 1px 2px color-mix(in oklab, var(--ink0) 12%, transparent); }
@@ -606,9 +634,13 @@ table { width: 100%; border-collapse: collapse; background: var(--card); }
 th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
   color: var(--ink2); font-weight: 640; padding: 9px 12px; background: var(--panel);
   border-bottom: 1px solid var(--rule); white-space: nowrap; }
-th.sortable { cursor: pointer; user-select: none; }
+th.sortable { user-select: none; }
 th.sortable:hover { color: var(--ink1); }
 th.active { color: var(--ink0); }
+.sorter { display: inline-flex; align-items: center; gap: 2px; padding: 0; border: 0;
+  background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit;
+  cursor: pointer; }
+.sorter:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 td { padding: 9px 12px; border-bottom: 1px solid var(--rule); font-size: 14px; }
 tr:last-child td { border-bottom: 0; }
 tbody tr { transition: background .12s ease; }
@@ -668,7 +700,7 @@ tbody tr:hover { background: color-mix(in oklab, var(--hover) 4%, transparent); 
 .empty { padding: 44px 12px; text-align: center; color: var(--ink2); font-size: 14px; }
 .linkish { font: inherit; color: var(--accent); background: none; border: 0; cursor: pointer; text-decoration: underline; }
 .skip { position: fixed; left: 12px; top: 8px; z-index: 10; transform: translateY(-160%);
-  padding: 9px 12px; border-radius: 6px; background: var(--ink0); color: var(--bg); }
+  padding: 9px 12px; border-radius: 6px; background: var(--ink0); color: var(--card); }
 .skip:focus { transform: none; }
 .audit-records { border-top: 1px solid var(--rule); }
 .audit-record { padding: 18px 0; border-bottom: 1px solid var(--rule); }
@@ -677,8 +709,82 @@ tbody tr:hover { background: color-mix(in oklab, var(--hover) 4%, transparent); 
 .audit-record-h a:hover { color: var(--gold-ink); text-decoration: underline; }
 .audit-record ul { margin: 12px 0; padding-left: 22px; color: var(--ink1); line-height: 1.65; }
 .audit-record p { margin: 0; overflow-wrap: anywhere; text-align: left; white-space: normal; }
+
+/* Bounded pilot: one case, with source identity and uncertainty kept visible. */
+.pilot-head { display: block; margin: 0; padding: 26px 0 22px; border-bottom: 1px solid var(--rule2); }
+.eyebrow { margin: 0 0 7px; color: var(--ink2); font-size: 11px; font-weight: 700;
+  letter-spacing: .075em; text-transform: uppercase; }
+.pilot-head h2 { margin: 0; max-width: 32ch; font-size: 27px; line-height: 1.2;
+  letter-spacing: -.022em; font-weight: 670; }
+.pilot-summary { max-width: 70ch; margin: 12px 0 0; color: var(--ink1); }
+.pilot-links, .state-line { display: flex; flex-wrap: wrap; gap: 7px 14px; margin-top: 15px; }
+.pilot-links a { font-size: 12.5px; text-decoration: none; border-bottom: 1px solid var(--rule2); }
+.pilot-links a:hover { border-color: var(--accent); }
+.state { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px;
+  border: 1px solid var(--rule2); border-radius: 999px; color: var(--ink1);
+  background: var(--card); font-size: 11.5px; font-weight: 640; }
+.state::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--stone); }
+.state--current::before { background: var(--ok); }
+.state--stale::before { background: var(--bad); }
+.state--open::before { background: var(--run); }
+.pilot-section { margin: 30px 0 0; }
+.pilot-section-h { display: flex; align-items: baseline; justify-content: space-between;
+  gap: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--rule2); }
+.pilot-section-h h3 { margin: 0; font-size: 15px; letter-spacing: -.005em; }
+.pilot-section-h p { margin: 0; color: var(--ink2); font-size: 12px; }
+.evidence-row { display: grid; grid-template-columns: minmax(150px, .8fr) minmax(260px, 2fr) minmax(120px, .7fr);
+  gap: 20px; align-items: start; padding: 14px 0; border-bottom: 1px solid var(--rule); }
+.evidence-name { font-weight: 640; }
+.evidence-source { color: var(--ink1); }
+.evidence-source small { display: block; margin-top: 3px; color: var(--ink2); }
+.outcome { display: inline-flex; align-items: center; justify-self: start; gap: 7px;
+  color: var(--ink1); font-size: 12px; font-weight: 680; }
+.outcome::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--stone); }
+.outcome--error { color: var(--cinnabar); }
+.outcome--pending { color: var(--brass); }
+.outcome--pass::before { background: var(--ok); }
+.outcome--error::before { background: var(--bad); }
+.outcome--pending::before { background: var(--run); }
+.pilot-split { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(260px, .85fr);
+  gap: 38px; margin-top: 18px; }
+.fact-list { margin: 0; }
+.fact { display: grid; grid-template-columns: 138px minmax(0, 1fr); gap: 14px;
+  padding: 10px 0; border-bottom: 1px solid var(--rule); }
+.fact dt { color: var(--ink2); font-size: 11.5px; }
+.fact dd { margin: 0; color: var(--ink1); font-size: 12.5px; overflow-wrap: anywhere; }
+.fact dd a { text-decoration: none; }
+.hash { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.disposition { padding: 16px; border: 1px dashed var(--rule2); border-radius: 10px; }
+.disposition strong { display: block; font-size: 16px; }
+.disposition p { margin: 5px 0 0; color: var(--ink2); font-size: 12.5px; }
+.disposition-rule { height: 1px; margin: 14px 0; background: var(--rule2); }
+.advisory-value { color: var(--brass); }
+.nonclaims { margin: 17px 0 0; padding: 0; list-style: none; }
+.nonclaims li { padding: 7px 0; border-bottom: 1px solid var(--rule); color: var(--ink1); font-size: 12.5px; }
+.nonclaims li::before { content: "Not "; color: var(--cinnabar); font-weight: 680; }
+.recurrence { display: flex; gap: 12px; align-items: flex-start; padding: 14px 0; }
+.recurrence p { margin: 0; color: var(--ink1); }
+.recurrence small { display: block; margin-top: 3px; color: var(--ink2); }
+.method-intro { max-width: 72ch; margin: 26px 0 34px; font-size: 16px; color: var(--ink1); }
+.loop { margin: 0; padding: 0; list-style: none; counter-reset: loop; }
+.loop li { counter-increment: loop; display: grid; grid-template-columns: 34px minmax(0, 1fr);
+  gap: 14px; padding: 17px 0; border-top: 1px solid var(--rule2); }
+.loop li::before { content: counter(loop, decimal-leading-zero); color: var(--ink2);
+  font: 680 12px/1.8 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.loop h3 { margin: 0 0 3px; font-size: 14px; }
+.loop p { margin: 0; max-width: 72ch; color: var(--ink1); }
+.method-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 38px; margin-top: 34px; }
+.method-grid h3 { margin: 0 0 10px; font-size: 14px; }
+.method-grid ul { margin: 0; padding-left: 18px; color: var(--ink1); }
+.method-grid li { margin: 7px 0; }
 @media (max-width: 600px) {
   .audit-record-h { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .boundary { flex-direction: column; gap: 4px; }
+  .pilot-head h2 { font-size: 23px; }
+  .evidence-row { grid-template-columns: 1fr; gap: 5px; }
+  .pilot-split, .method-grid { grid-template-columns: 1fr; gap: 24px; }
+  .fact { grid-template-columns: 1fr; gap: 3px; }
 }
 
 footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--rule);
@@ -690,9 +796,10 @@ footer a:hover { color: var(--accent); border-color: var(--accent); }
 </style></head>
 <body><a class="skip" href="#app">Skip to content</a><div class="wrap">
 <header>
-  <h1>formal-conjectures <span class="h1-sub">&middot; review queue</span></h1>
+  <h1><span class="product-name">Open Formal Workflows</span><span class="h1-sub">Formal Conjectures &middot; Review, Verification &amp; Preservation</span></h1>
   <div class="meta">Updated __STAMP__<span class="sep">|</span><a href="__FC_REPO__/pulls">pull requests</a><span class="sep">|</span><a href="__FC_SITE__">formal-conjectures</a><span class="sep">|</span><a href="__BOARD_REPO__">source</a></div>
 </header>
+<div class="boundary"><strong>Authority boundary</strong><span>Formal Conjectures owns declarations, pull-request state, CI, and maintainer decisions. This board only projects advisory evidence. A check, green build, or report is never approval or merge acceptance. <a href="https://github.com/google-deepmind/formal-conjectures/issues/4394">Protocol&nbsp;#4394</a></span></div>
 <div id="strip" class="strip"></div>
 <div class="controls">
   <div class="controls-row">
@@ -726,6 +833,7 @@ See the open pull requests at <a href="__FC_REPO__/pulls">github.com/google-deep
 <script>
 const DATA = __DATA__;
 const PR_AUDITS = __PR_AUDITS__;
+const PILOT = __PILOT__;
 const ISSUES = __ISSUES__;
 const META = __META__;
 
@@ -735,7 +843,7 @@ const CLS_OF = {signed:'ab--signed', unconditional:'ab--unconditional', conditio
 const AUDIT_DOT = {signed:'gold', unconditional:'moss', conditional:'brass', flagged:'cinnabar', unaudited:'stone'};
 const CARET = '<svg width="9" height="9" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const FID_TITLE = {flagged:'Flagged unfaithful', conditional:'Conditional — rests on an assumption', signed:'Signed faithful', unconditional:'Machine-checked unconditional', unaudited:'Not yet audited'};
-const BUCKETS = [['approved','Approved, ready to merge'],['review','Ready for review'],['author','Waiting on the author'],['draft','Draft / work in progress']];
+const BUCKETS = [['approved','Approval recorded'],['review','Ready for review'],['author','Waiting on the author'],['draft','Draft / work in progress']];
 const COLS = [['n','PR'],['title','title'],['author','author'],['kind','kind'],['prAudit','PR audit'],['audit','problem audit'],['age','open'],['waiting','waiting'],['idle','idle'],['ci','CI'],['appr','&check;'],['churn','&pm;']];
 const COLUMNS = COLS.filter(c => (c[0] !== 'audit' || META.hasAudit) && (c[0] !== 'prAudit' || META.hasPrAudit));
 const SORTABLE = {n:1, author:1, audit:1, age:1, waiting:1, idle:1, ci:1, appr:1, churn:1};
@@ -749,7 +857,14 @@ const FACETS = [
   {group:'ci', label:'CI', opts:['passing','failing','pending','running']},
 ];
 
-const state = {view:'queue', q:'', facets:{audit:new Set(), kind:new Set(), coll:new Set(), ci:new Set()}, sort:{col:'idle', dir:'desc'}};
+const DEFAULT_VIEW = META.hasPilot ? 'pilot' : 'queue';
+const TAB_SPECS = [['pilot','Pilot'],['queue','Queue'],['all','All PRs'],['pick','Pick one up'],['fidelity','Fidelity'],['pr-audits','Audit inventory'],['method','Method']]
+  .filter(v => (v[0] !== 'pilot' && v[0] !== 'method' || META.hasPilot)
+            && (v[0] !== 'fidelity' || META.hasAudit)
+            && (v[0] !== 'pick' || META.hasIssues)
+            && (v[0] !== 'pr-audits' || META.hasPrAuditFeed));
+const DATA_VIEWS = new Set(['queue','all','pick','fidelity']);
+const state = {view:DEFAULT_VIEW, q:'', facets:{audit:new Set(), kind:new Set(), coll:new Set(), ci:new Set()}, sort:{col:'idle', dir:'desc'}};
 
 const el = id => document.getElementById(id);
 const app = el('app'), searchEl = el('search'), filterbarEl = el('filterbar'), tabsEl = el('tabs'), countEl = el('count');
@@ -827,7 +942,7 @@ function tableHtml(recs, sortable){
   const head = COLUMNS.map(([k, l]) => {
     const s = sortable && SORTABLE[k], cur = state.sort.col === k;
     const arrow = cur ? '<span class="caret'+(state.sort.dir === 'asc' ? ' up' : '')+'">'+CARET+'</span>' : '';
-    return s ? '<th class="sortable'+(cur?' active':'')+'" data-col="'+k+'" title="Sort by '+k+'">'+l+arrow+'</th>' : '<th>'+l+'</th>';
+    return s ? '<th class="sortable'+(cur?' active':'')+'"><button class="sorter" data-col="'+k+'" aria-label="Sort by '+k+'">'+l+arrow+'</button></th>' : '<th>'+l+'</th>';
   }).join('');
   return '<div class="scroll"><table><thead><tr>'+head+'</tr></thead><tbody>'+recs.map(rowHtml).join('')+'</tbody></table></div>';
 }
@@ -905,6 +1020,84 @@ function renderPrAudits(){
     +'<div class="audit-records">'+rows+'</div></section>';
 }
 
+function humanize(value){ return String(value == null ? '' : value).replaceAll('_', ' '); }
+function outcome(value){
+  const cls = value === 'pass' || value === 'current' ? 'pass' : value === 'error' || value === 'stale' ? 'error' : 'pending';
+  return '<span class="outcome outcome--'+cls+'">'+esc(humanize(value))+'</span>';
+}
+function evidenceRow(name, source, detail, result){
+  return '<div class="evidence-row"><div class="evidence-name">'+esc(name)+'</div>'
+    +'<div class="evidence-source">'+source+'<small>'+esc(detail)+'</small></div>'+outcome(result)+'</div>';
+}
+function fact(label, value){ return '<div class="fact"><dt>'+esc(label)+'</dt><dd>'+value+'</dd></div>'; }
+function hash(value){ return '<span class="hash">'+esc(value)+'</span>'; }
+
+function renderPilot(){
+  if (!PILOT) return emptyState('The bounded pilot report is not present in this build.');
+  const report = PILOT.review_report, audit = report.immutable_audit;
+  const current = report.current_github_observation, typed = report.comparator_evidence.typed_outcome;
+  const links = PILOT.links, tools = PILOT.lean_eval.tool_pins;
+  const fresh = current && current.freshness === 'current';
+  const metadata = audit.checks[0];
+  const rows = evidenceRow(
+      'Current PR identity', '<a href="'+links.pull_request+'">GitHub observation</a>',
+      current ? 'Observed '+current.observed_at+' at '+current.head_commit_oid : 'No current observation',
+      current ? current.freshness : 'not observed')
+    + evidenceRow('Conditional proof metadata', '<a href="'+links.audit_packet+'">Frozen audit core</a>',
+      metadata.property+'; retained manual metadata review', metadata.outcome)
+    + evidenceRow('LeanEval-shaped workspace', '<a href="'+links.lean_eval+'">Pinned LeanEval interface</a>',
+      'Derived multi-file profile; preparation bytes and workspace files are content-addressed', 'derived')
+    + evidenceRow('Comparator invocation', '<a href="'+links.comparator_execution+'">Pinned execution source</a>',
+      typed.invocation.reason+'; exit code '+typed.invocation.exit_code, typed.invocation.outcome)
+    + evidenceRow('Structured result parse', 'Typed Comparator adapter',
+      typed.result_parse.reason, typed.result_parse.outcome)
+    + evidenceRow('Permitted-axiom policy', 'Typed Comparator adapter',
+      'Terminal text was retained but was not interpreted as a property verdict', typed.policy_result.outcome);
+  const nonclaims = report.nonclaims.map(item => '<li>'+esc(humanize(item.replace(/^not_/, '')))+'</li>').join('');
+  const disposition = report.maintainer_disposition == null ? 'Not recorded' : humanize(report.maintainer_disposition);
+  const advisory = audit.advisory_synthesis.advisory;
+  return '<article class="pilot">'
+    +'<header class="pilot-head"><p class="eyebrow">Selected calibration case · advisory pilot</p>'
+    +'<h2><a href="'+links.pull_request+'">PR #'+PILOT.case.number+'</a> · '+esc(PILOT.case.declaration)+'</h2>'
+    +'<p class="pilot-summary">'+esc(PILOT.case.title)+'. '+esc(PILOT.case.selection)+'. The report preserves the error as an error and leaves the maintainer decision empty.</p>'
+    +'<div class="state-line"><span class="state '+(fresh?'state--current':'state--stale')+'">'+(fresh?'Evidence head current':'Evidence stale')+'</span>'
+    +'<span class="state state--open">'+esc(current ? current.state : 'not observed')+'</span>'
+    +'<span class="state">'+esc(current && current.review_decision ? humanize(current.review_decision) : 'no review decision')+'</span>'
+    +'<span class="state">Advisory: '+esc(humanize(advisory))+'</span></div>'
+    +'<nav class="pilot-links" aria-label="Case evidence"><a href="'+links.source_file+'">Exact source</a><a href="'+links.linked_proof+'">Pinned linked proof</a><a href="'+links.audit_packet+'">Audit packet</a><a href="'+links.historical_run+'">Historical run</a><a href="'+links.protocol+'">Loop protocol</a></nav></header>'
+    +'<section class="pilot-section" aria-labelledby="evidence-heading"><div class="pilot-section-h"><h3 id="evidence-heading">Evidence and typed outcomes</h3><p>Different sources remain different claims</p></div>'+rows+'</section>'
+    +'<section class="pilot-section" aria-labelledby="inputs-heading"><div class="pilot-section-h"><h3 id="inputs-heading">Pinned inputs and environment</h3><p>Exact enough to revisit, not a promise of reproducibility</p></div><div class="pilot-split"><dl class="fact-list">'
+    +fact('PR head','<a href="'+links.head+'">'+hash(audit.head.commit_oid)+'</a>')
+    +fact('Audit core',hash(audit.core.root)+'<br>'+hash(audit.core.sha256))
+    +fact('Audit observation',hash(audit.observation.root)+'<br>'+hash(audit.observation.sha256))
+    +fact('Linked proof input',hash(PILOT.preparation.input_sha256))
+    +fact('Calibration source','<a href="'+links.calibration_source+'">'+hash(PILOT.preparation.source_head)+'</a>')
+    +fact('Workspace source','<a href="'+links.workspace_source+'">'+hash(PILOT.preparation.formal_conjectures_revision)+'</a>')
+    +fact('Mathlib',hash(PILOT.preparation.mathlib_revision))
+    +fact('LeanEval interface','<a href="'+links.lean_eval+'">'+hash(tools.lean_eval_interface_commit)+'</a>')
+    +fact('Comparator interface','<a href="'+links.comparator_interface+'">'+hash(tools.comparator_interface_commit)+'</a>')
+    +fact('Comparator execution','<a href="'+links.comparator_execution+'">'+hash(tools.comparator_execution_commit)+'</a>')
+    +fact('Toolchain',esc(tools.lean_toolchain))
+    +fact('Execution image',hash(PILOT.execution.image_id)+'<br>network: '+esc(PILOT.execution.network))
+    +fact('Manifest bindings','outcome '+hash(PILOT.execution.outcome_sha256)+'<br>preparation '+hash(PILOT.execution.preparation_sha256))
+    +'</dl><div><div class="disposition"><p class="eyebrow">Advisory ReviewReport synthesis</p><strong class="advisory-value">'+esc(humanize(advisory))+'</strong><p>Reader-facing synthesis over the immutable audit. It has no authority effect.</p><div class="disposition-rule"></div><p class="eyebrow">Maintainer disposition</p><strong>'+esc(disposition)+'</strong><p>Only a Formal Conjectures maintainer can supply this outside the generated report.</p></div><ul class="nonclaims">'+nonclaims+'</ul></div></div></section>'
+    +'<section class="pilot-section" aria-labelledby="recurrence-heading"><div class="pilot-section-h"><h3 id="recurrence-heading">Preservation and recurrence</h3><p>Scheduled observation, immutable evidence</p></div>'
+    +'<div class="recurrence">'+outcome(current ? current.freshness : 'not observed')+'<p>'+(fresh?'The live PR head still matches the frozen audit head.':'The live PR head does not match the frozen audit head. Existing findings were not reinterpreted.')+'<small>'+(current ? 'Observed '+esc(current.observed_at)+'. ' : '')+'The scheduled build regenerates this GitHub observation and validates retained report, preparation, outcome, and execution-manifest bytes.</small></p></div></section>'
+    +'</article>';
+}
+
+function renderMethod(){
+  if (!PILOT) return emptyState('The pilot method is not configured in this build.');
+  return '<article><p class="eyebrow">Pilot protocol</p><h2>Review, verification, and preservation loop</h2>'
+    +'<p class="method-intro">The board follows <a href="'+PILOT.links.protocol+'">Formal Conjectures issue #4394</a>. It is a bounded reading surface for one calibration case, designed to reduce maintainer review effort without creating a second authority or evidence silo.</p>'
+    +'<ol class="loop"><li><div><h3>Canonical metadata</h3><p>Start from the exact Formal Conjectures PR head, declaration, proof link, and conditions. Formal Conjectures remains canonical for declarations and repository policy.</p></div></li>'
+    +'<li><div><h3>Consumers and checks</h3><p>Bind LeanEval-shaped workspace inputs and Comparator execution to exact source, file, tool, and environment identities. Record typed pass, fail, error, unavailable, and not-evaluated states without reading verdicts from terminal prose.</p></div></li>'
+    +'<li><div><h3>Advisory reviewer report</h3><p>Collect checked facts, limitations, and current GitHub state in a ReviewReport. Advisory synthesis stays separate from maintainer disposition. An independent non-author pilot remains an external gate.</p></div></li>'
+    +'<li><div><h3>Preservation and recurrence</h3><p>Retain small content-addressed reports, manifests, and logs. Recheck the live PR head, expose stale evidence, and never silently change policy when tools or sources move.</p></div></li></ol>'
+    +'<div class="method-grid"><section><h3>What would count as pilot success</h3><ul><li>A non-author can reproduce the report finding from the exact references.</li><li>The report reduces, rather than adds to, maintainer reading time.</li><li>Head drift becomes visibly stale before evidence is reused.</li><li>Execution errors stay distinct from failed proof properties.</li><li>The calibration record remains inspectable after transient workspaces are removed.</li></ul></section>'
+    +'<section><h3>Non-goals</h3><ul><li>No merge gate, maintainer approval, or claim of mathematical truth.</li><li>No generic AI platform, centralized governance product, or new proof registry.</li><li>No Vela authority path. A later problems.science projection may only link to FC evidence.</li><li>No Econlib integration or partner representation.</li><li>No claim of reviewer buy-in, upstream adoption, or external validation.</li></ul></section></div></article>';
+}
+
 function statHtml(v, l, cls, facet){
   const body = '<span class="sv '+(cls||'')+'">'+v+'</span> <span class="sl">'+l+'</span>';
   if (!facet) return '<div class="stat">'+body+'</div>';
@@ -939,20 +1132,32 @@ function renderStrip(){
 
 function render(){
   const recs = DATA.filter(matches);
-  countEl.textContent = recs.length === DATA.length ? DATA.length+' PRs' : recs.length+' of '+DATA.length+' PRs';
-  app.innerHTML = state.view === 'queue' ? renderQueue(recs)
+  if (DATA_VIEWS.has(state.view)) countEl.textContent = recs.length === DATA.length ? DATA.length+' PRs' : recs.length+' of '+DATA.length+' PRs';
+  app.innerHTML = state.view === 'pilot' ? renderPilot()
+    : state.view === 'method' ? renderMethod()
+    : state.view === 'queue' ? renderQueue(recs)
     : state.view === 'pick' ? renderPick()
     : state.view === 'fidelity' ? renderFidelity(recs)
     : state.view === 'pr-audits' ? renderPrAudits() : renderAll(recs);
-  app.querySelectorAll('th.sortable').forEach(th => th.addEventListener('click', () => {
-    const c = th.dataset.col;
+  app.querySelectorAll('button.sorter').forEach(button => button.addEventListener('click', () => {
+    const c = button.dataset.col;
     if (state.sort.col === c) state.sort.dir = state.sort.dir === 'asc' ? 'desc' : 'asc';
     else { state.sort.col = c; state.sort.dir = c === 'author' ? 'asc' : 'desc'; }
     syncUrl(); render();
   }));
   app.querySelectorAll('[data-reset]').forEach(b => b.addEventListener('click', resetAll));
 }
-function updateTabs(){ tabsEl.querySelectorAll('.tab').forEach(b => b.classList.toggle('active', b.dataset.view === state.view)); }
+function updateTabs(){ tabsEl.querySelectorAll('.tab').forEach(b => {
+  const active = b.dataset.view === state.view;
+  b.classList.toggle('active', active); b.setAttribute('aria-selected', active); b.tabIndex = active ? 0 : -1;
+}); }
+function updateViewChrome(){
+  const dataView = DATA_VIEWS.has(state.view);
+  searchEl.closest('.search').hidden = !dataView;
+  filterbarEl.hidden = !dataView;
+  countEl.hidden = !dataView;
+  el('strip').hidden = state.view === 'pilot' || state.view === 'method' || state.view === 'pr-audits';
+}
 
 function closeMenus(){ filterbarEl.querySelectorAll('.fdd.open').forEach(dd => {
   dd.classList.remove('open'); dd.querySelector('.fmenu').hidden = true;
@@ -969,12 +1174,17 @@ function updateFilterUI(){
 }
 
 function buildToolbar(){
-  tabsEl.innerHTML = [['queue','Queue'],['all','All PRs'],['pick','Pick one up'],['fidelity','Fidelity'],['pr-audits','PR audits']]
-    .filter(v => (v[0] !== 'fidelity' || META.hasAudit)
-              && (v[0] !== 'pick' || META.hasIssues)
-              && (v[0] !== 'pr-audits' || META.hasPrAuditFeed))
+  tabsEl.innerHTML = TAB_SPECS
     .map(([k, l]) => '<button class="tab" role="tab" data-view="'+k+'">'+l+'</button>').join('');
-  tabsEl.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => { state.view = b.dataset.view; syncUrl(); updateTabs(); render(); }));
+  tabsEl.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => { state.view = b.dataset.view; syncUrl(); updateTabs(); updateViewChrome(); renderStrip(); render(); }));
+  tabsEl.addEventListener('keydown', event => {
+    if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+    const tabs = [...tabsEl.querySelectorAll('.tab')], current = tabs.indexOf(document.activeElement);
+    if (current < 0) return;
+    let next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1
+      : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+    event.preventDefault(); tabs[next].focus(); tabs[next].click();
+  });
   const groups = FACETS.filter(f => f.group !== 'audit' || META.hasAudit);
   filterbarEl.innerHTML = groups.map(f =>
     '<div class="fdd" data-group="'+f.group+'"><button class="fbtn" type="button" aria-haspopup="true" aria-expanded="false">'
@@ -999,16 +1209,16 @@ function resetAll(){ state.q = ''; searchEl.value = '';
 
 function syncUrl(){
   const p = new URLSearchParams();
-  if (state.view !== 'queue') p.set('view', state.view);
+  if (state.view !== DEFAULT_VIEW) p.set('view', state.view);
   if (state.q) p.set('q', state.q);
   ['audit','kind','coll','ci'].forEach(g => { if (state.facets[g].size) p.set(g, [...state.facets[g]].join(',')); });
-  if (state.view !== 'queue') p.set('sort', state.sort.col+':'+state.sort.dir);
+  if (state.view === 'all') p.set('sort', state.sort.col+':'+state.sort.dir);
   const h = p.toString();
   history.replaceState(null, '', h ? '#'+h : location.pathname + location.search);
 }
 function loadUrl(){
   const p = new URLSearchParams(location.hash.slice(1));
-  if (p.get('view')) state.view = p.get('view');
+  if (p.get('view') && TAB_SPECS.some(v => v[0] === p.get('view'))) state.view = p.get('view');
   if (p.get('q')){ state.q = p.get('q'); searchEl.value = state.q; }
   ['audit','kind','coll','ci'].forEach(g => { if (p.get(g)) state.facets[g] = new Set(p.get(g).split(',')); });
   if (p.get('sort')){ const s = p.get('sort').split(':'); state.sort = {col:s[0], dir:s[1] || 'desc'}; }
@@ -1018,6 +1228,7 @@ renderStrip();
 buildToolbar();
 loadUrl();
 updateTabs();
+updateViewChrome();
 updateFilterUI();
 render();
 </script>

@@ -1,0 +1,47 @@
+{
+  "schema": "formal-conjectures.fc-lean-eval-profile.v1",
+  "authority_effect": "none",
+  "profile_status": "derived",
+  "source_identity": {
+    "repository": "google-deepmind/formal-conjectures",
+    "head_commit_oid": "1f7b8ac102bbcac443288bc2f0620084db57422c",
+    "module": "FormalConjectures.ErdosProblems.\u00ab427\u00bb",
+    "declaration": "Erdos427.erdos_427"
+  },
+  "answer_cases": [
+    {
+      "mode": "proof",
+      "status": "supported",
+      "mechanism": "theorem_names",
+      "gate": null
+    }
+  ],
+  "submission_contract": {
+    "entrypoint": "Submission.lean",
+    "auxiliary_sources_glob": "Submission/**/*.lean",
+    "dependency_mode": "trusted_workspace_pins",
+    "multi_file": true,
+    "source_files": [
+      {
+        "path": "Submission.lean",
+        "sha256": "sha256:d9a8de79323786f8ff9bbdd766bd9505ba14f33e8c3492b925e34f341caa598d"
+      },
+      {
+        "path": "Submission/External.lean",
+        "sha256": "sha256:7556eb344963b568b4e0c393666f623877a97e2c6342583b6739b0c2ff5114ac"
+      }
+    ],
+    "licensing_status": "review_required"
+  },
+  "tool_pins": {
+    "lean_eval_interface_commit": "b3f154b605e13aa255035be39ce5587affb2ce03",
+    "comparator_interface_commit": "777e7f56119efc0fac34003db4efe831e0b53723",
+    "comparator_execution_commit": "71b52ec29e06d4b7d882726553b1ceb99a2499e0",
+    "lean_toolchain": "leanprover/lean4:v4.27.0",
+    "mathlib_commit": "a3a10db0e9d66acbebf76c5e6a135066525ac900"
+  },
+  "nonclaims": [
+    "not_a_successful_comparator_result",
+    "not_maintainer_or_upstream_acceptance"
+  ]
+}

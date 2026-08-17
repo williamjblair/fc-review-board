@@ -1,0 +1,10 @@
+{
+  "authority_effect": "none",
+  "image_id": "sha256:6ec1b87e25b3b6ea96d60a453dd01656bee17aa614ad7c5e4e78643550fefb2d",
+  "network": "none",
+  "outcome_sha256": "sha256:441afda65198f3480b1fb94bc3d13f20af33d2ba93079929f05b651e3cd9064e",
+  "preparation_sha256": "sha256:0185caf5722ba72a4c96fd801cea89f03d3e03871dcc07feb59b13ed3ea7282f",
+  "schema": "formal-conjectures.calibration-execution-manifest.v1",
+  "stderr_sha256": "sha256:b117865cc14cfce0cfc65c81d9dc82b9f4dec60c8c3da7bb33349429cfe99002",
+  "stdout_sha256": "sha256:aa3c8cc3e760c4914019b55ba1c49574f4ab371cacb671db27021cd6f9daef9b"
+}

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import os
 import unittest
 from unittest import mock
@@ -199,6 +200,27 @@ class ReviewReportProfileTest(unittest.TestCase):
             review_report.ReviewReportError, "must name the dependencies"
         ):
             review_report.validate_reviewer_attributions([item])
+
+    def test_render_boundary_rejects_filled_maintainer_disposition(self) -> None:
+        profile = review_report.build_profile(
+            self.source, "conditional-erdos-427-4884")
+        tampered = copy.deepcopy(profile)
+        tampered["maintainer_disposition"] = "approved"
+        with self.assertRaisesRegex(
+            review_report.ReviewReportError, "cannot set maintainer disposition"
+        ):
+            review_report.validate_profile(tampered)
+
+    def test_render_boundary_recomputes_comparator_binding(self) -> None:
+        profile = review_report.build_profile(
+            self.source, "conditional-erdos-427-4884",
+            comparator_outcome=self.invocation_error())
+        tampered = copy.deepcopy(profile)
+        tampered["comparator_evidence"]["canonical_sha256"] = "sha256:" + "0" * 64
+        with self.assertRaisesRegex(
+            review_report.ReviewReportError, "canonical binding mismatch"
+        ):
+            review_report.validate_profile(tampered)
 
 
 if __name__ == "__main__":
