@@ -152,6 +152,54 @@ class ReviewReportProfileTest(unittest.TestCase):
         with self.assertRaisesRegex(review_report.ReviewReportError, "requires a witness"):
             review_report.validate_comparator_outcome(outcome)
 
+    @staticmethod
+    def reviewer(kind: str) -> dict:
+        evidence = {
+            "repository": "https://github.com/google-deepmind/formal-conjectures",
+            "commit_oid": "601aff40d6fa6c3150242144fadba5dbcc24c89c",
+            "path": "FormalConjectures/ErdosProblems/427.lean",
+            "sha256": "sha256:" + "2" * 64,
+        }
+        return {
+            "kind": kind,
+            "attribution": "named reviewer",
+            "method": "source fidelity and assumption audit",
+            "exact_inputs": [evidence],
+            "scope": ["statement fidelity", "declared proof condition"],
+            "independence": "shared_dependencies",
+            "shared_dependencies": ["same immutable audit core"],
+            "results": [{**evidence, "path": "reviews/4884.json"}],
+        }
+
+    def test_human_and_ai_are_peer_attributed_kinds(self) -> None:
+        reviewers = [self.reviewer("human"), self.reviewer("ai")]
+        profile = review_report.build_profile(
+            self.source, "conditional-erdos-427-4884",
+            reviewer_attributions=reviewers)
+        self.assertEqual(
+            {item["kind"] for item in profile["reviewer_attributions"]},
+            {"human", "ai"},
+        )
+        self.assertTrue(profile["separation"]["reviewer_kind_is_attribution_not_quality"])
+        self.assertIsNone(profile["maintainer_disposition"])
+
+    def test_reviewer_quality_inputs_are_required_for_both_kinds(self) -> None:
+        for kind in ("human", "ai"):
+            item = self.reviewer(kind)
+            item["exact_inputs"] = []
+            with self.assertRaisesRegex(
+                review_report.ReviewReportError, "exact_inputs must be nonempty"
+            ):
+                review_report.validate_reviewer_attributions([item])
+
+    def test_shared_dependencies_must_be_visible(self) -> None:
+        item = self.reviewer("human")
+        item["shared_dependencies"] = []
+        with self.assertRaisesRegex(
+            review_report.ReviewReportError, "must name the dependencies"
+        ):
+            review_report.validate_reviewer_attributions([item])
+
 
 if __name__ == "__main__":
     unittest.main()

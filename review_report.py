@@ -32,6 +32,12 @@ COMPARATOR_FIELDS = {
     "policy_result", "terminal_evidence", "nonclaims",
 }
 
+REVIEWER_ATTRIBUTION_FIELDS = {
+    "kind", "attribution", "method", "exact_inputs", "scope",
+    "independence", "shared_dependencies", "results",
+}
+GIT_EVIDENCE_FIELDS = {"repository", "commit_oid", "path", "sha256"}
+
 
 def _canonical_sha256(value: Any) -> str:
     framed = json.dumps(
@@ -115,6 +121,65 @@ def validate_comparator_outcome(value: Any) -> dict[str, Any]:
     return json.loads(json.dumps(value))
 
 
+def validate_reviewer_attributions(value: Any) -> list[dict[str, Any]]:
+    """Bind peer human/AI reviewer evidence to exact Git-owned inputs/results.
+
+    Reviewer kind is attribution, not a quality score. The same required
+    method, scope, independence, dependency, and content-addressing fields
+    apply to both kinds. No attempt/session identity is introduced.
+    """
+    if not isinstance(value, list):
+        raise ReviewReportError("reviewer attributions must be a list")
+    validated = []
+    for index, item in enumerate(value):
+        if not isinstance(item, dict) or set(item) != REVIEWER_ATTRIBUTION_FIELDS:
+            raise ReviewReportError(
+                f"invalid reviewer attribution fields at index {index}")
+        if item["kind"] not in {"human", "ai"}:
+            raise ReviewReportError("reviewer kind must be human or ai")
+        for field in ("attribution", "method"):
+            if not isinstance(item[field], str) or not item[field].strip():
+                raise ReviewReportError(f"reviewer {field} must be a nonempty string")
+        if not isinstance(item["scope"], list) or not item["scope"] or not all(
+            isinstance(part, str) and part for part in item["scope"]
+        ):
+            raise ReviewReportError("reviewer scope must be nonempty strings")
+        if item["independence"] not in {
+            "independent", "shared_dependencies", "not_assessed",
+        }:
+            raise ReviewReportError("invalid reviewer independence value")
+        dependencies = item["shared_dependencies"]
+        if not isinstance(dependencies, list) or not all(
+            isinstance(part, str) and part for part in dependencies
+        ):
+            raise ReviewReportError("shared dependencies must be strings")
+        if item["independence"] == "shared_dependencies" and not dependencies:
+            raise ReviewReportError(
+                "shared-dependencies attribution must name the dependencies")
+        for field in ("exact_inputs", "results"):
+            evidence = item[field]
+            if not isinstance(evidence, list) or not evidence:
+                raise ReviewReportError(f"reviewer {field} must be nonempty")
+            for entry in evidence:
+                if not isinstance(entry, dict) or set(entry) != GIT_EVIDENCE_FIELDS:
+                    raise ReviewReportError(
+                        f"reviewer {field} must use exact Git evidence fields")
+                if not isinstance(entry["repository"], str) or not entry["repository"]:
+                    raise ReviewReportError("Git evidence repository must be nonempty")
+                if not isinstance(entry["commit_oid"], str) or not re.fullmatch(
+                    r"[0-9a-f]{40}", entry["commit_oid"]
+                ):
+                    raise ReviewReportError("Git evidence commit_oid must be 40 lowercase hex")
+                if not isinstance(entry["path"], str) or not entry["path"]:
+                    raise ReviewReportError("Git evidence path must be nonempty")
+                if not isinstance(entry["sha256"], str) or not re.fullmatch(
+                    r"sha256:[0-9a-f]{64}", entry["sha256"]
+                ):
+                    raise ReviewReportError("Git evidence sha256 is invalid")
+        validated.append(json.loads(json.dumps(item)))
+    return validated
+
+
 def validate_current_github(value: Any, *, pr: dict[str, Any]) -> dict[str, Any]:
     """Validate a closed, head-bound observation without interpreting it."""
     if not isinstance(value, dict):
@@ -159,7 +224,9 @@ def validate_current_github(value: Any, *, pr: dict[str, Any]) -> dict[str, Any]
 
 def build_profile(source: Path, fixture: str,
                   current_github: dict[str, Any] | None = None,
-                  comparator_outcome: dict[str, Any] | None = None) -> dict[str, Any]:
+                  comparator_outcome: dict[str, Any] | None = None,
+                  reviewer_attributions: list[dict[str, Any]] | None = None,
+                  ) -> dict[str, Any]:
     source = source.resolve(strict=True)
     fc_pr_audit._assert_source(source)
     expected = fc_pr_audit.FIXTURES.get(fixture)
@@ -223,12 +290,17 @@ def build_profile(source: Path, fixture: str,
             "authority": "advisory_execution_evidence_only",
         }
 
+    reviewers = None
+    if reviewer_attributions is not None:
+        reviewers = validate_reviewer_attributions(reviewer_attributions)
+
     return {
         "schema": "formal-conjectures.review-report-profile.v1",
         "authority_effect": "none",
         "immutable_audit": immutable,
         "current_github_observation": current,
         "comparator_evidence": comparator,
+        "reviewer_attributions": reviewers,
         "maintainer_disposition": None,
         "separation": {
             "advisory_is_not_maintainer_disposition": True,
@@ -236,6 +308,8 @@ def build_profile(source: Path, fixture: str,
             "head_mismatch_is_rendered_as_stale_not_reinterpreted": True,
             "comparator_evidence_does_not_set_maintainer_disposition": True,
             "terminal_text_is_never_a_policy_verdict": True,
+            "reviewer_kind_is_attribution_not_quality": True,
+            "review_evidence_does_not_set_maintainer_disposition": True,
         },
         "nonclaims": sorted(set(core["disposition"]["nonclaims"] + [
             "not_a_repository_decision_or_standing",
@@ -251,13 +325,18 @@ def main() -> None:
     parser.add_argument("fixture", choices=sorted(fc_pr_audit.FIXTURES))
     parser.add_argument("--github-json", type=Path)
     parser.add_argument("--comparator-json", type=Path)
+    parser.add_argument("--reviewer-attributions-json", type=Path)
     args = parser.parse_args()
     current = json.loads(args.github_json.read_text()) if args.github_json else None
     comparator = (
         json.loads(args.comparator_json.read_text()) if args.comparator_json else None
     )
+    reviewers = (
+        json.loads(args.reviewer_attributions_json.read_text())
+        if args.reviewer_attributions_json else None
+    )
     print(json.dumps(
-        build_profile(args.source, args.fixture, current, comparator),
+        build_profile(args.source, args.fixture, current, comparator, reviewers),
         indent=2, sort_keys=True))
 
 

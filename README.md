@@ -107,6 +107,13 @@ canonical bytes by SHA-256 and keeps invocation, structured-result parsing,
 and policy outcome separate. An invocation exception therefore remains
 `error` / `not_evaluated`; terminal text can never become a policy failure.
 
+Optional `--reviewer-attributions-json` evidence treats `human` and `ai` as
+peer attributed reviewer kinds. Both must name the reviewer, method, exact
+Git commit/path/hash inputs, scope, independence or shared dependencies, and
+content-addressed results. Kind is not a quality score, and neither kind can
+set maintainer disposition. The report uses source-owned Git provenance; it
+does not add an attempt, session, or parallel memory system.
+
 
 ## How it works
 
