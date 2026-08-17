@@ -23,6 +23,21 @@ Formal Conjectures maintainers and technically fluent reviewers who need to insp
 
 Provide a bounded review, verification, and preservation loop for one calibration case at a time: identify the exact Formal Conjectures source and revision, expose pinned evidence and typed outcomes, distinguish checked facts from errors and interpretation, leave maintainer disposition explicitly unfilled, and make drift or recurrence visible. Success means a reviewer can understand the evidence and its limits quickly, then return to Formal Conjectures for every authoritative action.
 
+## First-Screen Contract
+
+A first-time reviewer should answer five questions without scrolling or opening
+technical detail:
+
+1. What exact Formal Conjectures case is selected?
+2. Does the retained evidence still match the live PR head?
+3. What evidence exists, and where did the replay stop?
+4. What did the advisory ReviewReport conclude?
+5. Has a Formal Conjectures maintainer recorded a disposition?
+
+Method, architecture, hashes, tool pins, and recurrence mechanics are secondary
+progressive disclosure. They must remain inspectable without competing with the
+review task.
+
 ## Brand Personality
 
 Forensic, calm, and accountable. The interface should feel like a well-kept lab notebook or code-review evidence packet: precise enough to trust, modest about what it knows, and direct about what remains unresolved.
@@ -42,6 +57,10 @@ Forensic, calm, and accountable. The interface should feel like a well-kept lab 
 - Unknown is a first-class state: errors, unavailable evidence, staleness, and unfilled maintainer disposition remain distinct.
 - Reduce maintainer reading time: one selected calibration case, strong information hierarchy, progressive detail, and direct upstream links.
 - Preserve provenance without creating a silo: the board is a disposable advisory projection over source-owned records.
+- Keep navigation task-first: case review, review queue, and all PRs are primary;
+  discovery, inventory, fidelity, and method are secondary.
+- Put actionable review work before approval-recorded, author-blocked, and draft
+  queues; keep those states available but collapsed by default.
 
 ## Accessibility & Inclusion
 

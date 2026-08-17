@@ -39,7 +39,10 @@ ended with an invocation `error`. The typed result keeps result parsing
 `not_attempted` and axiom policy `not_evaluated`; terminal text is retained by
 hash but never converted into a failing property verdict.
 
-The Pilot view collects, without merging their meanings:
+The **Case review** workbench answers the first review questions before exposing
+technical detail: exact case identity, evidence freshness, upstream PR state,
+advisory conclusion, and the explicitly unrecorded maintainer disposition. It
+then collects, without merging their meanings:
 
 - the exact FC PR head, source file, linked proof, audit core, and observation;
 - a derived LeanEval-shaped multi-file profile with exact interface and tool pins;
@@ -48,13 +51,15 @@ The Pilot view collects, without merging their meanings:
 - a fresh GitHub head observation, rendered as current or stale; and
 - an advisory ReviewReport whose maintainer disposition is always unfilled.
 
-The Method view states the loop, non-goals, and what an independent pilot would
-need to demonstrate. No reviewer buy-in, upstream adoption, partner status, or
-Econlib integration is claimed.
+Replay pins, preservation mechanics, and method are collapsed by default. The
+**Method & authority** disclosure states the loop, non-goals, and what an
+independent pilot would need to demonstrate. No reviewer buy-in, upstream
+adoption, partner status, or Econlib integration is claimed.
 
 ## What it shows
 
-PRs are grouped into approval-recorded / ready-for-review / waiting-on-author / draft.
+The **Review queue** puts ready-for-review PRs first and collapses
+waiting-on-author, approval-recorded, and draft states until requested.
 Ready-for-review sorts by **waiting** time, not by age: a pull request that sat
 with its author for two months and has been on the queue for a week ranks below
 one that has waited a fortnight throughout. The author and draft groups sort by
