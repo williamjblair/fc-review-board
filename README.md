@@ -2,17 +2,21 @@
 
 **Formal Conjectures · Review, Verification & Preservation**
 
-A bounded review-evidence pilot plus review-queue dashboard for open pull requests on
+A public orientation page plus a bounded review-evidence pilot and review-queue workbench for open pull requests on
 [google-deepmind/formal-conjectures](https://github.com/google-deepmind/formal-conjectures),
 in the spirit of mathlib's [queueboard](https://leanprover-community.github.io/queueboard/).
-The default **Review queue** is the information-rich workbench: it shows what
+The public root explains the program, shows the real live deployment, and links
+directly into the information-rich workbench. The workbench's default **Review
+queue** shows what
 is ready for review, what is waiting on its author, and what has been waiting
 longest. The **Selected case** view follows the review, verification, and
 preservation loop in
 [Formal Conjectures issue #4394](https://github.com/google-deepmind/formal-conjectures/issues/4394)
 for one bounded calibration case.
 
-**Live:** https://williamjblair.github.io/open-formal-workflows/
+**Landing:** https://williamjblair.github.io/open-formal-workflows/
+
+**Review workbench:** https://williamjblair.github.io/open-formal-workflows/workbench/
 
 Open Formal Workflows is the pilot program name; this deployment is scoped to
 Formal Conjectures review, verification, and preservation. The repository and
@@ -173,7 +177,8 @@ mathlib4 URLs), runs its pipeline against formal-conjectures and writes
 rebuilds its ReviewReport from the exact audit checkout and retained typed
 Comparator outcome, and validates the pilot component bindings. `generate.py`
 reads those projections plus the optional audit feed and writes a single
-self-contained `index.html`.
+self-contained `workbench/index.html`. The committed `landing.html` is the
+public root. The Pages workflow publishes both in one artifact.
 
 Leaning on queueboard means the parts that break when GitHub changes a response
 shape, or when the repository adopts a new label, are maintained upstream. What
@@ -205,8 +210,12 @@ Needs `gh` (authenticated), `jq` and [`uv`](https://docs.astral.sh/uv/).
 
 ```bash
 ./sync.sh                      # writes snapshot.json (a few minutes)
-python3 generate.py            # writes index.html
-python3 -m http.server         # then open http://localhost:8000
+python3 generate.py            # writes workbench/index.html
+mkdir -p _site/workbench
+cp landing.html _site/index.html
+cp -R assets _site/assets
+cp workbench/index.html _site/workbench/index.html
+python3 -m http.server -d _site  # then open http://localhost:8000
 ```
 
 `sync.sh` keeps its working tree in `.queueboard/`, so a second run reuses the

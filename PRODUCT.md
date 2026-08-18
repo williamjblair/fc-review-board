@@ -13,15 +13,15 @@ maintainer endorsement or transfer authority away from the upstream repository.
 
 ## Register
 
-product
+brand at the public root; product at `/workbench/`
 
 ## Users
 
-Formal Conjectures maintainers and technically fluent reviewers who need to inspect a small, exact evidence package without confusing advisory checks for repository authority. Secondary readers include AI for Math Seed Grant evaluators assessing whether the pilot reduces review effort while preserving provenance and uncertainty.
+Cold public readers and AI for Math Seed Grant evaluators who need to understand the program before inspecting it, plus Formal Conjectures maintainers and technically fluent reviewers who need the exact evidence workbench without confusing advisory checks for repository authority.
 
 ## Product Purpose
 
-Provide a review workbench over Formal Conjectures pull requests plus a bounded review, verification, and preservation loop for one calibration case. The queue helps reviewers triage what is ready; the selected case identifies the exact source and revision, exposes pinned evidence and typed outcomes, distinguishes checked facts from errors and interpretation, leaves maintainer disposition explicitly unfilled, and makes drift or recurrence visible. Success means a reviewer can understand the work and its limits quickly, then return to Formal Conjectures for every authoritative action.
+Orient a public reader to Open Formal Workflows, then provide a review workbench over Formal Conjectures pull requests plus a bounded review, verification, and preservation loop for one calibration case. The landing explains the evidence-to-decision boundary and leads directly to the deployment. The queue helps reviewers triage what is ready; the selected case identifies the exact source and revision, exposes pinned evidence and typed outcomes, distinguishes checked facts from errors and interpretation, leaves maintainer disposition explicitly unfilled, and makes drift or recurrence visible. Success means a reader can understand the program quickly, inspect the work and its limits, then return to Formal Conjectures for every authoritative action.
 
 ## Brand Personality
 
@@ -45,12 +45,26 @@ Forensic, calm, and accountable. The interface should feel like a well-kept lab 
 
 ## First-Screen Contract
 
-The default route is the information-rich **Review queue**, not a landing page
-or a one-case narrative. It must immediately state what the table is for, place
-ready-for-review work first, and expose familiar search, filters, grouped tables,
-CI state, approvals, queue age, and advisory audit evidence. The **Selected
-case** remains a first-class tab for the deeper pinned ReviewReport. Evidence,
-method, and fidelity views support the workbench; they do not replace it.
+The public root is a concise brand/landing surface. It names the program, states
+the evidence and human-decision claim, shows the actual live deployment, and
+offers **Open the review workbench** as its primary action. It must not imitate
+the workbench with fabricated metrics or substitute marketing claims for
+inspectable artifacts.
+
+At `/workbench/`, the first screen is the information-rich **Review queue**. It
+immediately states what the table is for, places ready-for-review work first,
+and exposes familiar search, filters, grouped tables, CI state, approvals,
+queue age, and advisory audit evidence. The **Selected case** remains a
+first-class tab for the deeper pinned ReviewReport. Evidence, method, and
+fidelity views support the workbench; they do not replace it.
+
+## Program Boundaries
+
+- Vela Protocol 1 is the technical and evidentiary substrate.
+- Formal Conjectures is the first source-owned deployment and remains canonical and decisive.
+- LeanEval and Comparator provide reproducible execution evidence with typed outcomes.
+- problems.science supplies public orientation and contribution context, not authority.
+- Econlib is only a possible future opt-in deployment after its source contract is agreed. It is not a current integration or partner.
 
 ## Accessibility & Inclusion
 

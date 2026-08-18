@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Open Formal Workflows | Evidence, review, and human decisions</title>
+  <meta name="description" content="A public, advisory evidence and review surface for AI-assisted formal mathematics. Formal Conjectures is the first source-owned deployment.">
+  <link rel="canonical" href="https://williamjblair.github.io/open-formal-workflows/">
+  <meta property="og:title" content="Open Formal Workflows">
+  <meta property="og:description" content="Exact evidence, advisory review, and explicit human decisions for AI-assisted formal mathematics.">
+  <meta property="og:url" content="https://williamjblair.github.io/open-formal-workflows/">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://williamjblair.github.io/open-formal-workflows/assets/workbench-preview.jpg">
+  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+  <script>
+    (() => {
+      const legacy = new URLSearchParams(location.hash.slice(1));
+      if (["view", "q", "audit", "kind", "coll", "ci", "sort"].some(key => legacy.has(key))) {
+        location.replace("./workbench/" + location.hash);
+      }
+    })();
+  </script>
+  <style>
+    :root {
+      --paper: oklch(98.2% 0.008 248);
+      --sheet: oklch(99.4% 0.004 248);
+      --mist: oklch(94.4% 0.019 245);
+      --panel: oklch(91.6% 0.027 245);
+      --ink: oklch(20% 0.030 262);
+      --body: oklch(37% 0.029 258);
+      --muted: oklch(51% 0.021 254);
+      --rule: color-mix(in oklab, var(--ink) 15%, transparent);
+      --rule-strong: color-mix(in oklab, var(--ink) 28%, transparent);
+      --blue: oklch(43% 0.105 251);
+      --blue-dark: oklch(32% 0.082 254);
+      --deep: oklch(18% 0.029 256);
+      --deep-ink: oklch(94% 0.010 250);
+      --deep-muted: oklch(72% 0.020 252);
+      --max: 1180px;
+      --ease: cubic-bezier(.22, 1, .36, 1);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Avenir Next", Avenir, "Segoe UI", system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; }
+    :focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; border-radius: 5px; }
+    .skip {
+      position: fixed;
+      left: 16px;
+      top: 12px;
+      z-index: 20;
+      transform: translateY(-160%);
+      padding: 10px 14px;
+      border-radius: 6px;
+      background: var(--ink);
+      color: var(--sheet);
+    }
+    .skip:focus { transform: none; }
+    .shell { width: min(var(--max), calc(100% - 48px)); margin-inline: auto; }
+
+    .site-header {
+      display: flex;
+      align-items: center;
+      min-height: 76px;
+      border-bottom: 1px solid var(--rule);
+    }
+    .site-header .shell { display: flex; align-items: center; gap: 30px; }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 11px;
+      font-weight: 680;
+      letter-spacing: -.018em;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .brand-mark {
+      display: grid;
+      width: 28px;
+      height: 28px;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 3px;
+      padding: 4px;
+      border: 1px solid var(--rule-strong);
+      border-radius: 7px;
+    }
+    .brand-mark i { display: block; background: var(--blue); border-radius: 2px; }
+    .brand-mark i:nth-child(2), .brand-mark i:nth-child(3) { background: var(--panel); }
+    .site-nav { display: flex; align-items: center; gap: 26px; margin-left: auto; }
+    .site-nav a {
+      color: var(--body);
+      font-size: 14px;
+      font-weight: 560;
+      text-decoration: none;
+    }
+    .site-nav a:hover { color: var(--blue); }
+    .header-action {
+      display: inline-flex;
+      min-height: 44px;
+      align-items: center;
+      justify-content: center;
+      padding: 0 17px;
+      border-radius: 8px;
+      background: var(--ink);
+      color: var(--sheet) !important;
+    }
+    .header-action:hover { background: var(--blue-dark); }
+    .header-action-short { display: none; }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: clamp(78px, 10vw, 138px) 0 clamp(72px, 8vw, 112px);
+      background: var(--mist);
+      border-bottom: 1px solid var(--rule);
+    }
+    .hero::before, .hero::after {
+      content: "";
+      position: absolute;
+      pointer-events: none;
+    }
+    .hero::before {
+      inset: 34px max(24px, calc((100vw - var(--max)) / 2)) auto auto;
+      width: clamp(120px, 20vw, 260px);
+      height: 1px;
+      background: var(--rule-strong);
+    }
+    .hero::after {
+      right: max(24px, calc((100vw - var(--max)) / 2));
+      bottom: 34px;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--blue);
+      box-shadow: -22px 0 0 var(--panel), -44px 0 0 var(--panel);
+    }
+    .hero-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(290px, .75fr); gap: clamp(44px, 8vw, 112px); align-items: end; }
+    .eyebrow {
+      margin: 0 0 18px;
+      color: var(--blue-dark);
+      font-size: 12px;
+      font-weight: 720;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+    h1, h2, h3, p { text-wrap: pretty; }
+    h1 {
+      max-width: 940px;
+      margin: 0;
+      font-size: clamp(3.15rem, 7.1vw, 6.35rem);
+      font-weight: 690;
+      letter-spacing: -.045em;
+      line-height: .96;
+    }
+    .hero-copy { max-width: 560px; padding-bottom: 8px; }
+    .hero-copy p {
+      margin: 0 0 27px;
+      color: var(--body);
+      font-size: clamp(1.05rem, 1.6vw, 1.22rem);
+      line-height: 1.58;
+    }
+    .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+    .button {
+      display: inline-flex;
+      min-height: 50px;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 0 20px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 680;
+      text-decoration: none;
+      transition: transform 180ms var(--ease), background 180ms var(--ease), color 180ms var(--ease);
+    }
+    .button:hover { transform: translateY(-2px); }
+    .button-primary { background: var(--blue); color: var(--sheet); }
+    .button-primary:hover { background: var(--blue-dark); }
+    .button-secondary { border-color: var(--rule-strong); color: var(--ink); background: color-mix(in oklab, var(--sheet) 52%, transparent); }
+    .button-secondary:hover { border-color: var(--blue); color: var(--blue-dark); }
+    .arrow { font-size: 1.1em; }
+    .source-proof {
+      display: grid;
+      grid-template-columns: 11px minmax(0, 1fr);
+      gap: 10px;
+      max-width: 490px;
+      margin-top: 30px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .source-proof::before { content: ""; width: 8px; height: 8px; margin-top: 6px; border: 1px solid var(--blue); border-radius: 50%; }
+    .source-proof strong { color: var(--body); }
+    .source-proof a { color: var(--blue-dark); font-weight: 650; text-underline-offset: 3px; }
+
+    .section { padding: clamp(88px, 11vw, 148px) 0; }
+    .section-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, .65fr); gap: clamp(38px, 7vw, 96px); align-items: end; margin-bottom: 54px; }
+    .section h2 {
+      max-width: 760px;
+      margin: 0;
+      font-size: clamp(2.25rem, 4.6vw, 4.65rem);
+      font-weight: 670;
+      letter-spacing: -.047em;
+      line-height: 1.01;
+    }
+    .section-lede { max-width: 600px; margin: 0; color: var(--body); font-size: 17px; }
+
+    .deployment { background: var(--sheet); }
+    .preview-frame {
+      overflow: hidden;
+      border: 1px solid var(--rule-strong);
+      border-radius: 14px;
+      background: var(--deep);
+    }
+    .preview-bar {
+      display: flex;
+      min-height: 48px;
+      align-items: center;
+      gap: 10px;
+      padding: 0 15px;
+      border-bottom: 1px solid color-mix(in oklab, var(--deep-ink) 18%, transparent);
+      color: var(--deep-muted);
+      font-size: 12px;
+    }
+    .preview-dots { display: flex; gap: 6px; }
+    .preview-dots i { width: 7px; height: 7px; border-radius: 50%; background: color-mix(in oklab, var(--deep-ink) 25%, transparent); }
+    .preview-label { margin-left: 7px; }
+    .preview-live { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+    .preview-live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: oklch(67% 0.11 145); }
+    .preview-viewport { height: min(56vw, 663px); background: var(--deep); }
+    .preview-image-link { display: block; width: 100%; height: 100%; }
+    .preview-viewport picture { display: block; width: 100%; height: 100%; }
+    .preview-viewport img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+    .preview-caption {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 24px;
+      align-items: center;
+      padding: 18px 20px;
+      border-top: 1px solid color-mix(in oklab, var(--deep-ink) 18%, transparent);
+      color: var(--deep-muted);
+      font-size: 13px;
+    }
+    .preview-caption strong { display: block; margin-bottom: 2px; color: var(--deep-ink); font-size: 14px; }
+    .preview-caption a { color: var(--deep-ink); font-weight: 650; text-decoration: none; white-space: nowrap; }
+    .preview-caption a:hover { text-decoration: underline; text-underline-offset: 4px; }
+    .boundary-pair { display: grid; grid-template-columns: 1fr 1fr; margin-top: 38px; border-top: 1px solid var(--rule-strong); }
+    .boundary-pair article { padding: 27px 0 0; }
+    .boundary-pair article + article { padding-left: 38px; border-left: 1px solid var(--rule); }
+    .boundary-pair h3 { margin: 0 0 7px; font-size: 14px; font-weight: 700; }
+    .boundary-pair p { max-width: 55ch; margin: 0; color: var(--muted); font-size: 14px; }
+
+    .architecture { background: var(--mist); border-block: 1px solid var(--rule); }
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      border-block: 1px solid var(--rule-strong);
+    }
+    .flow li { position: relative; min-height: 270px; padding: 28px 30px 32px 0; }
+    .flow li + li { padding-left: 30px; border-left: 1px solid var(--rule); }
+    .flow li:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      z-index: 1;
+      top: 29px;
+      right: -14px;
+      width: 28px;
+      height: 28px;
+      border: 1px solid var(--rule-strong);
+      border-radius: 50%;
+      background: var(--mist);
+      color: var(--blue-dark);
+      text-align: center;
+      font: 600 16px/26px system-ui, sans-serif;
+    }
+    .flow-num { display: block; margin-bottom: 68px; color: var(--blue-dark); font: 700 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .flow h3 { margin: 0 0 10px; font-size: 19px; font-weight: 680; letter-spacing: -.018em; }
+    .flow p { margin: 0; color: var(--body); font-size: 14px; line-height: 1.65; }
+    .protocol-note { display: grid; grid-template-columns: minmax(190px, .42fr) minmax(0, 1fr); gap: 34px; margin-top: 42px; align-items: start; }
+    .protocol-note strong { font-size: 15px; }
+    .protocol-note p { max-width: 760px; margin: 0; color: var(--body); }
+
+    .artifacts { background: var(--sheet); }
+    .artifact-list { margin: 0; padding: 0; border-top: 1px solid var(--rule-strong); list-style: none; }
+    .artifact-list li { border-bottom: 1px solid var(--rule); }
+    .artifact-list a {
+      display: grid;
+      min-height: 94px;
+      grid-template-columns: minmax(180px, .5fr) minmax(0, 1fr) auto;
+      gap: 30px;
+      align-items: center;
+      padding: 15px 0;
+      text-decoration: none;
+    }
+    .artifact-list a:hover .artifact-name { color: var(--blue); }
+    .artifact-name { font-size: 17px; font-weight: 680; letter-spacing: -.012em; }
+    .artifact-description { color: var(--muted); font-size: 14px; }
+    .artifact-action { color: var(--blue-dark); font-size: 13px; font-weight: 680; white-space: nowrap; }
+    .scope-note { max-width: 820px; margin: 34px 0 0; color: var(--muted); font-size: 14px; }
+    .context-links { display: flex; flex-wrap: wrap; gap: 10px 24px; margin: 25px 0 0; color: var(--muted); font-size: 14px; }
+    .context-links a { color: var(--blue-dark); font-weight: 650; text-underline-offset: 3px; }
+
+    .final-cta { padding: clamp(88px, 10vw, 132px) 0; background: var(--deep); color: var(--deep-ink); }
+    .final-cta .shell { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 48px; align-items: end; }
+    .final-cta h2 { max-width: 780px; margin: 0; font-size: clamp(2.6rem, 5.2vw, 5.15rem); line-height: .98; letter-spacing: -.04em; }
+    .final-cta p { max-width: 660px; margin: 24px 0 0; color: var(--deep-muted); font-size: 17px; }
+    .final-cta .button-primary { background: var(--deep-ink); color: var(--deep); }
+    .final-cta .button-primary:hover { background: var(--panel); }
+
+    footer { padding: 30px 0 36px; background: var(--deep); color: var(--deep-muted); border-top: 1px solid color-mix(in oklab, var(--deep-ink) 15%, transparent); }
+    footer .shell { display: flex; align-items: center; gap: 20px; }
+    footer p { max-width: 820px; margin: 0; font-size: 12.5px; }
+    footer a { margin-left: auto; color: var(--deep-ink); font-size: 13px; text-decoration: none; white-space: nowrap; }
+    footer a:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+    @media (max-width: 850px) {
+      .hero-grid, .section-head { grid-template-columns: 1fr; }
+      .hero-copy { max-width: 680px; }
+      .flow { grid-template-columns: 1fr 1fr; }
+      .flow li { min-height: 230px; border-bottom: 1px solid var(--rule); }
+      .flow li:nth-child(3) { padding-left: 0; border-left: 0; }
+      .flow li:nth-child(2)::after { display: none; }
+      .final-cta .shell { grid-template-columns: 1fr; align-items: start; }
+    }
+
+    @media (max-width: 720px) {
+      .shell { width: min(100% - 30px, var(--max)); }
+      .site-header { min-height: 66px; }
+      .site-header .shell { gap: 14px; }
+      .brand { font-size: 14px; }
+      .brand-mark { width: 26px; height: 26px; }
+      .site-nav a:not(.header-action) { display: none; }
+      .header-action { min-height: 44px; padding-inline: 13px; font-size: 13px !important; }
+      .hero { padding-top: 72px; }
+      .hero-grid { gap: 42px; }
+      h1 { font-size: clamp(3rem, 15vw, 4.35rem); }
+      .button { width: 100%; }
+      .section { padding-block: 78px; }
+      .section-head { gap: 24px; margin-bottom: 38px; }
+      .section h2 { font-size: clamp(2.25rem, 12vw, 3.3rem); }
+      .preview-frame { margin-inline: -8px; border-radius: 10px; }
+      .preview-viewport { height: 465px; }
+      .preview-caption { grid-template-columns: 1fr; gap: 12px; }
+      .preview-caption a { white-space: normal; }
+      .boundary-pair { grid-template-columns: 1fr; }
+      .boundary-pair article + article { padding-left: 0; border-left: 0; }
+      .boundary-pair article { padding-block: 24px 0; }
+      .flow { grid-template-columns: 1fr; }
+      .flow li, .flow li + li, .flow li:nth-child(3) { min-height: 0; padding: 26px 0 30px; border-left: 0; border-bottom: 1px solid var(--rule); }
+      .flow li:not(:last-child)::after { top: auto; right: auto; bottom: -14px; left: 0; transform: rotate(90deg); }
+      .flow li:nth-child(2)::after { display: block; }
+      .flow-num { margin-bottom: 34px; }
+      .protocol-note { grid-template-columns: 1fr; gap: 10px; }
+      .artifact-list a { min-height: 0; grid-template-columns: 1fr auto; gap: 5px 14px; padding: 21px 0; }
+      .artifact-description { grid-column: 1 / -1; grid-row: 2; }
+      .artifact-action { grid-column: 2; grid-row: 1; }
+      .final-cta h2 { font-size: clamp(2.7rem, 13.5vw, 4.25rem); }
+      footer .shell { align-items: flex-start; flex-direction: column; }
+      footer a { margin-left: 0; }
+    }
+
+    @media (max-width: 350px) {
+      .brand-mark { display: none; }
+      .header-action-long { display: none; }
+      .header-action-short { display: inline; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site-header">
+    <div class="shell">
+      <a class="brand" href="./" aria-label="Open Formal Workflows home">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        Open Formal Workflows
+      </a>
+      <nav class="site-nav" aria-label="Primary navigation">
+        <a href="#deployment">Deployment</a>
+        <a href="#method">Evidence path</a>
+        <a href="#artifacts">Artifacts</a>
+        <a class="header-action" href="./workbench/" aria-label="Open the review workbench"><span class="header-action-long">Open workbench</span><span class="header-action-short">Workbench</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="shell">
+        <p class="eyebrow">Open Formal Workflows</p>
+        <div class="hero-grid">
+          <h1 id="hero-title">Evidence that stays evidence. Decisions that stay human.</h1>
+          <div class="hero-copy">
+            <p>A public, advisory review surface for AI-assisted formal mathematics. Exact sources and reproducible runs stay inspectable, giving reviewers a compact evidence trail before source maintainers record decisions.</p>
+            <div class="actions">
+              <a class="button button-primary" href="./workbench/">Open the review workbench <span class="arrow" aria-hidden="true">→</span></a>
+              <a class="button button-secondary" href="#method">Follow the evidence path</a>
+            </div>
+            <p class="source-proof"><span><strong>First source-owned deployment:</strong> <a href="https://github.com/google-deepmind/formal-conjectures/pull/4884">Formal Conjectures PR #4884, Erdos427.erdos_427</a>. Maintainer disposition: Not recorded. Formal Conjectures remains canonical and decisive.</span></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section deployment" id="deployment" aria-labelledby="deployment-title">
+      <div class="shell">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">First deployment</p>
+            <h2 id="deployment-title">A live review surface for Formal Conjectures.</h2>
+          </div>
+          <p class="section-lede">The workbench joins current pull request state to exact audit records, typed execution outcomes, and an explicitly unfilled maintainer disposition.</p>
+        </div>
+
+        <div class="preview-frame">
+          <div class="preview-bar" aria-hidden="true">
+            <span class="preview-dots"><i></i><i></i><i></i></span>
+            <span class="preview-label">open-formal-workflows / workbench</span>
+            <span class="preview-live">Public deployment</span>
+          </div>
+          <div class="preview-viewport">
+            <a class="preview-image-link" href="./workbench/" aria-label="Open the current Formal Conjectures review workbench">
+              <picture>
+                <source media="(max-width: 720px)" srcset="./assets/workbench-preview-mobile.jpg">
+                <img src="./assets/workbench-preview.jpg" width="1280" height="720" loading="lazy" decoding="async" alt="Open Formal Workflows review queue with grouped pull requests, filters, audit states, and the advisory evidence-only boundary.">
+              </picture>
+            </a>
+          </div>
+          <div class="preview-caption">
+            <div><strong>Captured from the generated workbench</strong>Open the deployment for current queue data, selected case evidence, recurrence checks, and method.</div>
+            <a href="./workbench/">Inspect current data →</a>
+          </div>
+        </div>
+
+        <div class="boundary-pair" aria-label="Deployment authority boundary">
+          <article>
+            <h3>What the deployment contributes</h3>
+            <p>It makes exact source identity, environments, checks, errors, and stale evidence easier to inspect together.</p>
+          </article>
+          <article>
+            <h3>What the deployment cannot do</h3>
+            <p>It cannot approve, merge, establish mathematical truth, or record maintainer acceptance. The selected case currently says “Not recorded.”</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section architecture" id="method" aria-labelledby="method-title">
+      <div class="shell">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">The evidence path</p>
+            <h2 id="method-title">A narrow path from source work to a maintainer decision.</h2>
+          </div>
+          <p class="section-lede">Each stage has one job. Evidence can inform a decision, but it cannot become the decision by changing labels or crossing systems.</p>
+        </div>
+
+        <ol class="flow" aria-label="Source to maintainer decision and standing">
+          <li>
+            <span class="flow-num">01 / SOURCE</span>
+            <h3>Formal Conjectures source</h3>
+            <p>Formal Conjectures owns the declaration, pull request identity, repository policy, and current source state.</p>
+          </li>
+          <li>
+            <span class="flow-num">02 / EVIDENCE</span>
+            <h3>Pinned Lean execution</h3>
+            <p>LeanEval and Comparator bind runs to exact inputs, tool revisions, environments, and typed outcomes.</p>
+          </li>
+          <li>
+            <span class="flow-num">03 / REVIEW</span>
+            <h3>Evidence review</h3>
+            <p>The ReviewReport preserves passes, errors, limitations, and not-evaluated states without creating authority.</p>
+          </li>
+          <li>
+            <span class="flow-num">04 / DECISION</span>
+            <h3>Maintainer records decision</h3>
+            <p>Only the source maintainer can decide acceptance. Until then, the disposition remains empty and standing does not change.</p>
+          </li>
+        </ol>
+
+        <div class="protocol-note">
+          <strong>Vela Protocol 1 is the technical substrate.</strong>
+          <p>It keeps evidence, review, authority, and standing as separate records. <a href="https://problems.science/">problems.science</a> provides public orientation and contribution context without becoming a source of truth.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section artifacts" id="artifacts" aria-labelledby="artifacts-title">
+      <div class="shell">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Public artifacts</p>
+            <h2 id="artifacts-title">Follow every claim back to its record.</h2>
+          </div>
+          <p class="section-lede">The landing page orients. The artifacts carry the evidence, method, and source identity.</p>
+        </div>
+
+        <ul class="artifact-list">
+          <li><a href="./workbench/"><span class="artifact-name">Review workbench</span><span class="artifact-description">Live Formal Conjectures queue, selected case, and evidence views.</span><span class="artifact-action">Open →</span></a></li>
+          <li><a href="./workbench/#view=method"><span class="artifact-name">Method and authority</span><span class="artifact-description">The bounded review, verification, preservation, and recurrence protocol.</span><span class="artifact-action">Read →</span></a></li>
+          <li><a href="https://github.com/google-deepmind/formal-conjectures/issues/4394"><span class="artifact-name">Formal Conjectures source record</span><span class="artifact-description">Issue #4394, the upstream proposal for reducing maintainer review cycles.</span><span class="artifact-action">GitHub →</span></a></li>
+        </ul>
+
+        <p class="context-links"><span>Technical substrate: <a href="https://github.com/vela-science/vela/blob/main/docs/PROTOCOL.md">Vela Protocol 1</a></span><span>Public orientation: <a href="https://problems.science/">problems.science</a></span></p>
+        <p class="scope-note"><strong>Deployment scope:</strong> Formal Conjectures is first. Econlib is a possible future opt-in deployment only after its source contract is agreed. It is not a current integration or represented partner.</p>
+      </div>
+    </section>
+
+    <section class="final-cta" aria-labelledby="cta-title">
+      <div class="shell">
+        <div>
+          <h2 id="cta-title">Inspect the deployment, not a promise.</h2>
+          <p>Open the current review queue, inspect the selected evidence packet, and follow every authoritative action back to Formal Conjectures.</p>
+        </div>
+        <a class="button button-primary" href="./workbench/">Open the review workbench <span class="arrow" aria-hidden="true">→</span></a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="shell">
+      <p>Open Formal Workflows is an advisory evidence surface. Formal Conjectures remains canonical and decisive. No maintainer endorsement or merge readiness is claimed.</p>
+      <a href="https://github.com/williamjblair/open-formal-workflows">Source on GitHub</a>
+    </div>
+  </footer>
+</body>
+</html>

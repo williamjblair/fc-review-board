@@ -13,7 +13,65 @@ colors:
   outcome-pass: "oklch(52% 0.075 145)"
   outcome-error: "oklch(52% 0.12 34)"
   outcome-pending: "oklch(66% 0.10 80)"
+  landing-mist: "oklch(94.4% 0.019 245)"
+  landing-panel: "oklch(91.6% 0.027 245)"
+  landing-action: "oklch(43% 0.105 251)"
+  landing-action-dark: "oklch(32% 0.082 254)"
+  landing-deep: "oklch(18% 0.029 256)"
+  landing-deep-muted: "oklch(72% 0.020 252)"
+  deployment-live: "oklch(67% 0.11 145)"
 typography:
+  landing-display:
+    fontFamily: "Avenir Next, Avenir, Segoe UI, system-ui, sans-serif"
+    fontSize: "clamp(3.15rem, 7.1vw, 6.35rem)"
+    fontWeight: 690
+    lineHeight: 0.96
+    letterSpacing: "-0.045em"
+  landing-section:
+    fontFamily: "Avenir Next, Avenir, Segoe UI, system-ui, sans-serif"
+    fontSize: "clamp(2.25rem, 4.6vw, 4.65rem)"
+    fontWeight: 670
+    lineHeight: 1.01
+  landing-cta:
+    fontFamily: "Avenir Next, Avenir, Segoe UI, system-ui, sans-serif"
+    fontSize: "clamp(2.6rem, 5.2vw, 5.15rem)"
+    fontWeight: 700
+    lineHeight: 0.98
+  landing-lede:
+    fontFamily: "Avenir Next, Avenir, Segoe UI, system-ui, sans-serif"
+    fontSize: "17px"
+    fontWeight: 400
+    lineHeight: 1.6
+  landing-hero-body:
+    fontFamily: "Avenir Next, Avenir, Segoe UI, system-ui, sans-serif"
+    fontSize: "clamp(1.05rem, 1.6vw, 1.22rem)"
+    fontWeight: 400
+    lineHeight: 1.58
+  landing-flow-title:
+    fontFamily: "Avenir Next, Avenir, Segoe UI, system-ui, sans-serif"
+    fontSize: "19px"
+    fontWeight: 680
+    lineHeight: 1.5
+  landing-flow-label:
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace"
+    fontSize: "12px"
+    fontWeight: 700
+    lineHeight: 1.4
+  landing-display-mobile:
+    fontFamily: "Avenir Next, Avenir, Segoe UI, system-ui, sans-serif"
+    fontSize: "clamp(3rem, 15vw, 4.35rem)"
+    fontWeight: 690
+    lineHeight: 0.96
+  landing-section-mobile:
+    fontFamily: "Avenir Next, Avenir, Segoe UI, system-ui, sans-serif"
+    fontSize: "clamp(2.25rem, 12vw, 3.3rem)"
+    fontWeight: 670
+    lineHeight: 1.01
+  landing-cta-mobile:
+    fontFamily: "Avenir Next, Avenir, Segoe UI, system-ui, sans-serif"
+    fontSize: "clamp(2.7rem, 13.5vw, 4.25rem)"
+    fontWeight: 700
+    lineHeight: 0.98
   product-title:
     fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif"
     fontSize: "23px"
@@ -82,6 +140,7 @@ typography:
     fontWeight: 650
     lineHeight: 1.5
 rounded:
+  landing-mark: "2px"
   micro: "3px"
   focus: "4px"
   compact: "5px"
@@ -91,6 +150,7 @@ rounded:
   rail: "9px"
   surface: "10px"
   table: "12px"
+  landing-preview: "14px"
   pill: "999px"
 spacing:
   xs: "4px"
@@ -153,6 +213,63 @@ method views. Refinements are deliberately narrow:
   horizontally scrollable table.
 
 No queue feature, evidence source, or authority boundary was removed.
+
+### Public landing composition
+
+**Scene:** a researcher or seed-grant reviewer reads a public artifact on a
+laptop in a bright office, then opens the exact evidence surface beside its
+source repository. This forces a light, high-contrast landing page rather than
+the workbench's ambient-light theme.
+
+**Brand voice:** archival, exact, lucid. The landing uses a deliberate Avenir
+Next and system-sans stack that reads like a technical exhibition label rather
+than a generic developer dashboard. Its committed pale-blue field and dark
+ink extend the workbench palette without pretending to be the workbench.
+
+The composition adapts the licensed Salient template's high-level rhythm only:
+restrained header, strong hero, real product preview, layered explanation, and
+final action. No Salient source, component, image, logo, or template-owned
+asset is included in this repository. Testimonials, pricing, logo clouds,
+generic gradients, and stock imagery are intentionally absent.
+
+The root landing has five narrative beats:
+
+1. the program claim and primary workbench action;
+2. a linked desktop or mobile capture of the actual generated workbench;
+3. the source to evidence to advisory review to maintainer-decision flow;
+4. direct public artifact links; and
+5. a final workbench action.
+
+The preview is a fresh desktop/mobile capture of the generated `/workbench/`,
+not a recreated dashboard. It links to current data and avoids rendering the
+full 289-row application inside the landing page. Legacy root URL hashes
+containing workbench state redirect to the matching `/workbench/` hash.
+
+### Landing audit and polish, 2026-08-17
+
+The final landing was rendered from the Pages artifact at 1280×720, 621×800,
+390×844, and 320×720. The page had no horizontal overflow at any width. The
+linked preview loaded the 1280×720 desktop capture above 720px and the 390×844
+mobile capture below it, both at their natural dimensions. The 621px header
+breakpoint and 320px compact brand treatment were adjusted from the first
+audit so the primary action stays fully visible.
+
+Keyboard checks covered the skip link, brand, section navigation, primary
+action, source record, and artifact links. Each received the documented 3px
+focus outline. The rendered page reported no console warning or error, the
+primary mobile controls remained at least 44px high, and the primary action,
+legacy case hash, and Method artifact all resolved into the generated
+workbench. A captured product image replaced the earlier nested iframe, so the
+landing does not download or expose a second interactive copy of the 289-row
+application.
+
+The final deterministic Impeccable scan reports only `cramped-padding` and
+`flat-type-hierarchy`. The padding warnings inspect the full-bleed section
+elements rather than their inset `.shell` children. The hierarchy warning
+samples 12–19px support text while omitting the 36–102px fluid display sizes.
+Fresh rendered inspection shows generous section insets and a clear display,
+section, body, and label hierarchy, so these are recorded as detector false
+positives rather than prompts to distort the composition.
 
 ### Final Impeccable audit, 2026-08-18
 

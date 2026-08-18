@@ -98,15 +98,17 @@ jobs:
         run: ./sync.sh
 
       # generate.py reads snapshot.json, the issue list, the base branch's file
-      # list and the audit feed, and writes
-      # index.html. It exits non-zero if the snapshot is missing or empty, so a
+      # list and the audit feed, and writes the generated workbench below the
+      # static public landing page. It exits non-zero if the snapshot is missing or empty, so a
       # bad run fails rather than deploying an empty board; the last good
       # deploy stays and the next scheduled run retries.
       - name: Generate board
         run: |
           python3 generate.py
-          mkdir -p _site
-          cp index.html _site/index.html
+          mkdir -p _site/workbench
+          cp landing.html _site/index.html
+          cp -R assets _site/assets
+          cp workbench/index.html _site/workbench/index.html
 
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:

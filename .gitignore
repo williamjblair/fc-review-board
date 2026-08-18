@@ -3,6 +3,7 @@ prs.json
 verdicts.json
 pr_audits.json
 index.html
+workbench/
 _site/
 err.txt
 __pycache__/

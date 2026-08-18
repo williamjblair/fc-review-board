@@ -22,6 +22,8 @@ class ReviewerWorkbenchContractTest(unittest.TestCase):
             self.assertIn(tab, self.template)
         self.assertIn("Formal Conjectures review queue", self.template)
         self.assertIn("open the upstream pull request", self.template)
+        self.assertIn('<a href="__LANDING_SITE__">overview</a>', self.template)
+        self.assertIn('href="../assets/favicon.svg"', self.template)
 
     def test_queue_keeps_information_rich_tables_and_filters(self) -> None:
         self.assertIn('class="scroll"><table class="pr-table"', self.template)

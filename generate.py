@@ -57,11 +57,12 @@ ERDOS_FILE_RE = re.compile(r"ErdosProblems/(\d+)\.lean")
 
 # Provenance pointers, present only when an audit feed is configured.
 FRONTIER_URL = AUDIT_SITE
-METHOD_URL = (AUDIT_SITE + "/method.html") if AUDIT_SITE else ""
 FC_REPO_URL = f"https://github.com/{REPO}"
 FC_SITE_URL = "https://google-deepmind.github.io/formal-conjectures"
 BOARD_REPO_URL = "https://github.com/williamjblair/open-formal-workflows"
-BOARD_SITE_URL = "https://williamjblair.github.io/open-formal-workflows/"
+LANDING_SITE_URL = "https://williamjblair.github.io/open-formal-workflows/"
+BOARD_SITE_URL = f"{LANDING_SITE_URL}workbench/"
+METHOD_URL = f"{BOARD_SITE_URL}#view=method"
 
 # --- data -----------------------------------------------------------------
 # PR state comes from queueboard, the same tool mathlib's review dashboard is
@@ -469,6 +470,7 @@ def main() -> None:
            .replace("__FC_SITE__", FC_SITE_URL)
            .replace("__BOARD_REPO__", BOARD_REPO_URL)
            .replace("__BOARD_SITE__", BOARD_SITE_URL)
+           .replace("__LANDING_SITE__", LANDING_SITE_URL)
            .replace("__METHOD__", METHOD_URL)
            .replace("__FRONTIER__", FRONTIER_URL)
            .replace("__PR_AUDIT_NOTE__", (
@@ -484,10 +486,12 @@ def main() -> None:
                      "queueboard</a>, the tool mathlib's review dashboard is built on. "
                      "An independent tool, not affiliated with the formal-conjectures "
                      "maintainers.</p>", doc, flags=re.S)
-    (HERE / "index.html").write_text(doc)
+    workbench = HERE / "workbench"
+    workbench.mkdir(exist_ok=True)
+    (workbench / "index.html").write_text(doc)
     review = [r for r in records if r["bucket"] == "review"]
     longest = max((r["waiting"] or r["age"] for r in review), default=0)
-    print(f"wrote index.html - {len(records)} PRs, {len(review)} ready for "
+    print(f"wrote workbench/index.html - {len(records)} PRs, {len(review)} ready for "
           f"review ({sum(1 for r in review if r['kind'] == 'statement')} "
           f"statements), longest waiting {longest}d")
 
@@ -503,7 +507,7 @@ TEMPLATE = r"""<!doctype html>
 <meta property="og:title" content="Open Formal Workflows | Formal Conjectures Review, Verification &amp; Preservation">
 <meta property="og:description" content="A bounded advisory evidence pilot for Formal Conjectures review, verification, and preservation.">
 <meta property="og:url" content="__BOARD_SITE__">
-<link rel="icon" href="data:,">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
 <style>
 :root {
   /* Restrained evidence palette: cool paper, one blue link accent, and semantic
@@ -823,7 +827,7 @@ footer a:hover { color: var(--accent); border-color: var(--accent); }
 <body><a class="skip" href="#app">Skip to content</a><div class="wrap">
 <header>
   <h1><span class="product-name">Open Formal Workflows</span><span class="h1-sub">Formal Conjectures &middot; Review, Verification &amp; Preservation</span></h1>
-  <div class="meta">Updated __STAMP__<span class="sep">|</span><a href="__FC_REPO__/pulls">pull requests</a><span class="sep">|</span><a href="__FC_SITE__">formal-conjectures</a><span class="sep">|</span><a href="__BOARD_REPO__">source</a></div>
+  <div class="meta">Updated __STAMP__<span class="sep">|</span><a href="__LANDING_SITE__">overview</a><span class="sep">|</span><a href="__FC_REPO__/pulls">pull requests</a><span class="sep">|</span><a href="__FC_SITE__">formal-conjectures</a><span class="sep">|</span><a href="__BOARD_REPO__">source</a></div>
 </header>
 <div class="boundary"><strong>Advisory evidence only</strong><span>Formal Conjectures is canonical for declarations, pull requests, CI, and maintainer decisions. Board checks and reports never mean approval or merge acceptance. <a href="https://github.com/google-deepmind/formal-conjectures/issues/4394">Protocol&nbsp;#4394</a></span></div>
 <div id="strip" class="strip"></div>
