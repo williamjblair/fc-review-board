@@ -2,14 +2,15 @@
 
 **Formal Conjectures · Review, Verification & Preservation**
 
-A bounded review-evidence pilot with secondary queue tools for open pull requests on
+A bounded review-evidence pilot plus review-queue dashboard for open pull requests on
 [google-deepmind/formal-conjectures](https://github.com/google-deepmind/formal-conjectures),
 in the spirit of mathlib's [queueboard](https://leanprover-community.github.io/queueboard/).
-The default view follows the review, verification, and preservation loop in
+The default **Review queue** is the information-rich workbench: it shows what
+is ready for review, what is waiting on its author, and what has been waiting
+longest. The **Selected case** view follows the review, verification, and
+preservation loop in
 [Formal Conjectures issue #4394](https://github.com/google-deepmind/formal-conjectures/issues/4394)
-for one selected calibration case. The queue remains available as a secondary tool so
-maintainers can see what is ready for review, what is waiting on its author,
-and what has been waiting longest.
+for one bounded calibration case.
 
 **Live:** https://williamjblair.github.io/open-formal-workflows/
 
@@ -39,11 +40,7 @@ ended with an invocation `error`. The typed result keeps result parsing
 `not_attempted` and axiom policy `not_evaluated`; terminal text is retained by
 hash but never converted into a failing property verdict.
 
-The default page is a deliberately plain case note: exact case identity and
-source, one status sentence, then **What happened**, **Review finding**, and
-**Maintainer decision**. It keeps the advisory conclusion separate from the
-explicitly unrecorded maintainer disposition, then collects behind disclosures,
-without merging their meanings:
+The Selected case view collects, without merging their meanings:
 
 - the exact FC PR head, source file, linked proof, audit core, and observation;
 - a derived LeanEval-shaped multi-file profile with exact interface and tool pins;
@@ -52,15 +49,13 @@ without merging their meanings:
 - a fresh GitHub head observation, rendered as current or stale; and
 - an advisory ReviewReport whose maintainer disposition is always unfilled.
 
-Replay pins, preservation mechanics, method, queues, and inventory are collapsed
-or secondary by default. The **Method & authority** disclosure states the loop, non-goals, and what an
-independent pilot would need to demonstrate. No reviewer buy-in, upstream
-adoption, partner status, or Econlib integration is claimed.
+The Method view states the loop, non-goals, and what an independent pilot would
+need to demonstrate. No reviewer buy-in, upstream adoption, partner status, or
+Econlib integration is claimed.
 
-## Secondary review tools
+## What it shows
 
-The **Review queue** puts ready-for-review PRs first and collapses
-waiting-on-author, approval-recorded, and draft states until requested.
+PRs are grouped into approval-recorded / ready-for-review / waiting-on-author / draft.
 Ready-for-review sorts by **waiting** time, not by age: a pull request that sat
 with its author for two months and has been on the queue for a week ranks below
 one that has waited a fortnight throughout. The author and draft groups sort by

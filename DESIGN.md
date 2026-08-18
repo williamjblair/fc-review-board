@@ -1,101 +1,94 @@
 ---
 name: Open Formal Workflows: Formal Conjectures Review, Verification & Preservation
-description: A calm, task-first reviewer workbench for exact evidence, uncertainty, and source authority.
+description: A forensic review notebook for exact evidence, uncertainty, and source authority.
 colors:
   evidence-blue: "oklch(40% 0.072 252)"
-  paper-blue: "oklch(97.6% 0.006 238)"
-  panel-blue: "oklch(94.1% 0.009 242)"
-  card-blue: "oklch(99.2% 0.003 238)"
-  ink-primary: "oklch(19% 0.024 258)"
-  ink-secondary: "oklch(35% 0.022 254)"
-  ink-muted: "oklch(52% 0.016 250)"
+  evidence-blue-dark: "rgb(144, 174, 207)"
+  paper-blue: "oklch(97.2% 0.008 248)"
+  panel-blue: "oklch(93.4% 0.011 250)"
+  card-blue: "oklch(99.2% 0.004 248)"
+  ink-primary: "oklch(20% 0.030 262)"
+  ink-secondary: "oklch(38% 0.026 258)"
+  ink-muted: "oklch(54% 0.018 252)"
   outcome-pass: "oklch(52% 0.075 145)"
   outcome-error: "oklch(52% 0.12 34)"
   outcome-pending: "oklch(66% 0.10 80)"
-  dark-paper-blue: "oklch(17.4% 0.024 252)"
-  dark-card-blue: "oklch(20.6% 0.024 253)"
-  dark-ink-primary: "oklch(92% 0.012 258)"
-  dark-evidence-blue: "oklch(74% 0.058 250)"
 typography:
+  product-title:
+    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontSize: "23px"
+    fontWeight: 660
+    lineHeight: 1.5
+  queue-title:
+    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontSize: "18px"
+    fontWeight: 640
+    lineHeight: 1.5
+  disposition:
+    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontSize: "16px"
+    fontWeight: 640
+    lineHeight: 1.5
   headline:
     fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif"
-    fontSize: "35px"
-    fontWeight: 710
-    lineHeight: 1.14
-    letterSpacing: "-0.028em"
+    fontSize: "27px"
+    fontWeight: 670
+    lineHeight: 1.2
+    letterSpacing: "-0.022em"
   title:
     fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif"
-    fontSize: "20px"
-    fontWeight: 680
-    lineHeight: 1.35
+    fontSize: "15px"
+    fontWeight: 640
+    lineHeight: 1.5
   body:
     fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif"
-    fontSize: "15.5px"
+    fontSize: "15px"
     fontWeight: 400
     lineHeight: 1.5
-  label:
+  row:
     fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif"
-    fontSize: "10px"
-    fontWeight: 700
+    fontSize: "14px"
+    fontWeight: 400
     lineHeight: 1.5
-    letterSpacing: "0.075em"
-  metadata:
+  subtitle:
     fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif"
-    fontSize: "12px"
-    fontWeight: 500
-    lineHeight: 1.5
-  micro:
-    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif"
-    fontSize: "11px"
+    fontSize: "13.5px"
     fontWeight: 500
     lineHeight: 1.5
   control:
     fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif"
     fontSize: "13px"
-    fontWeight: 500
-    lineHeight: 1.5
-  table:
-    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif"
-    fontSize: "14px"
     fontWeight: 400
     lineHeight: 1.5
-  indicator:
+  meta:
     fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif"
-    fontSize: "17px"
-    fontWeight: 500
-    lineHeight: 1
-  disclosure-icon:
+    fontSize: "12.5px"
+    fontWeight: 400
+    lineHeight: 1.5
+  detail:
     fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif"
-    fontSize: "18px"
-    fontWeight: 500
-    lineHeight: 1
-  brand:
+    fontSize: "12px"
+    fontWeight: 400
+    lineHeight: 1.5
+  label:
     fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif"
-    fontSize: "19px"
+    fontSize: "11px"
     fontWeight: 700
-    lineHeight: 1.3
-  view-title:
+    lineHeight: 1.5
+    letterSpacing: "0.075em"
+  flag:
     fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif"
-    fontSize: "25px"
-    fontWeight: 680
-    lineHeight: 1.3
-  mobile-headline:
-    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif"
-    fontSize: "27px"
-    fontWeight: 710
-    lineHeight: 1.13
-  method-title:
-    fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif"
-    fontSize: "28px"
-    fontWeight: 680
-    lineHeight: 1.3
+    fontSize: "10px"
+    fontWeight: 650
+    lineHeight: 1.5
 rounded:
-  marker: "3px"
+  micro: "3px"
   focus: "4px"
   compact: "5px"
-  menu-item: "6px"
+  skip: "6px"
+  tab: "7px"
   control: "8px"
-  menu: "9px"
+  rail: "9px"
   surface: "10px"
   table: "12px"
   pill: "999px"
@@ -106,16 +99,16 @@ spacing:
   lg: "22px"
   xl: "38px"
 components:
-  disclosure:
-    backgroundColor: "transparent"
+  tab-active:
+    backgroundColor: "{colors.card-blue}"
+    textColor: "{colors.ink-primary}"
+    rounded: "{rounded.control}"
+    padding: "4px 13px"
+  status-chip:
+    backgroundColor: "{colors.card-blue}"
     textColor: "{colors.ink-secondary}"
-    rounded: "0"
-    padding: "15px 0"
-  text-button:
-    backgroundColor: "transparent"
-    textColor: "{colors.evidence-blue}"
-    rounded: "0"
-    padding: "2px 0"
+    rounded: "{rounded.pill}"
+    padding: "3px 8px"
   search-input:
     backgroundColor: "{colors.card-blue}"
     textColor: "{colors.ink-primary}"
@@ -129,26 +122,61 @@ Deployment: **Formal Conjectures · Review, Verification & Preservation**
 
 ## 1. Overview
 
-**Creative North Star: "The Case Note"**
+**Creative North Star: "The Review Workbench"**
 
-This product should feel like a reviewer opened one short, carefully prepared
-case note in ordinary office light. The exact source and one status sentence
-lead into three findings: what happened, the advisory review finding, and the
-maintainer decision. Everything else waits until requested.
+This product should feel like the original Formal Conjectures review board at its best: a familiar, information-rich workbench opened beside GitHub, dense without becoming cryptic, and explicit about which observations are checked, derived, stale, or absent. The interface serves reviewers. It never performs institutional confidence or turns a diagnostic into a decision.
 
-The layout uses one narrow reading column, hairline rules, quiet labels, and one
-cool link accent. Semantic color appears only when it carries a typed outcome or
-freshness state. Technical replay detail and protocol are collapsed. The queue
-still exists as a secondary tool.
+The layout uses flat paper-like surfaces, compact grouped tables, a stable navigation rail, and one cool link accent. Semantic color appears only when it carries a typed outcome or freshness state. The queue is the default triage surface; the bounded case remains source-first and exact.
 
 **Key Characteristics:**
 
 - Forensic, calm, accountable.
 - Exact identities before interpretation.
-- One status sentence and three sequential findings before technical detail.
 - Unknown and not-evaluated states remain visible.
 - Flat structure with rhythm from rules and spacing, not card grids.
-- No persistent dashboard navigation or summary metrics on the case route.
+- Responsive from a 390px review check to a large monitor without page overflow.
+
+### Recovered baseline and targeted refinement
+
+The historical baseline is commit `2a308ba` (the last information-rich board
+before the task-first redesign). The final interface restores its queue tables,
+overview, filters, navigation, selected-case dossier, fidelity, evidence, and
+method views. Refinements are deliberately narrow:
+
+- the review queue is again the default and states its purpose in one sentence;
+- ready-for-review work appears before approval-recorded work;
+- navigation and table labels use full reviewer-facing words rather than
+  `Pilot`, `Queue`, `open`, `waiting`, `idle`, checkmark, and plus/minus shorthand;
+- the authority line uses the current canonical/advisory wording;
+- the footer no longer repeats a long field-by-field legend; and
+- mobile controls use 44px targets, a full-width search field, and a contained
+  horizontally scrollable table.
+
+No queue feature, evidence source, or authority boundary was removed.
+
+### Final Impeccable audit, 2026-08-18
+
+This score is for the rendered recovered workbench, not the earlier sparse
+design. It combines the Impeccable product critique with fresh in-app browser
+checks at 1280×720 and 390×844.
+
+| Dimension | Score | Rendered evidence |
+| --- | ---: | --- |
+| Hierarchy | 96 | Product and authority precede the overview; the default view names the review queue; ready work is the first table group. |
+| Information architecture | 97 | All seven original workbench views remain; queue triage is primary, selected-case evidence is first-class, and method is secondary. |
+| Clarity | 96 | Navigation and all eleven table headings use full words; one purpose sentence directs authoritative work upstream. |
+| Interaction and accessibility | 96 | Semantic tabs and tables, keyboard arrow navigation, visible focus, no broad live region, and 44px mobile search/tab/filter targets were verified. |
+| Responsive behavior | 95 | At 390px the document has no horizontal page overflow; the 930px evidence table scrolls only inside its labeled frame and retains all columns. |
+| Visual craft | 95 | The original cool-paper workbench, compact status language, and distinctive evidence components are preserved without a card grid or decorative effects. |
+
+**Composite: 95.8/100.** Browser evidence also confirmed 289 rendered PR rows,
+114 ready-review rows, six typed selected-case evidence rows, an inconclusive
+advisory synthesis, an unfilled maintainer disposition, and zero console
+warnings or errors. The deterministic Impeccable scan reports one
+`flat-type-hierarchy` warning while also measuring a 1.9:1 size range. The
+rendered 23px product title, 18px view title, 14px rows, and 11–12.5px labels
+are visibly distinct, so this is documented as a detector false positive
+rather than "fixed" by exaggerating an information-dense table hierarchy.
 
 ## 2. Colors
 
@@ -157,15 +185,16 @@ The palette is restrained: cool blue paper and ink, one evidence-blue link accen
 ### Primary
 
 - **Evidence Blue** (`oklch(40% 0.072 252)`): links, keyboard focus, active filters, and other inspectable source affordances.
+- **Evidence Blue, dark** (`rgb(144, 174, 207)`): the contrast-adjusted form of the same accent in dark mode.
 
 ### Neutral
 
-- **Paper Blue** (`oklch(97.6% 0.006 238)`): the daylight review surface.
-- **Panel Blue** (`oklch(94.1% 0.009 242)`): controls and table headers.
-- **Card Blue** (`oklch(99.2% 0.003 238)`): inputs and bounded evidence notes.
-- **Primary Ink** (`oklch(19% 0.024 258)`): headings and source identities.
-- **Secondary Ink** (`oklch(35% 0.022 254)`): body copy and evidence descriptions.
-- **Muted Ink** (`oklch(52% 0.016 250)`): metadata, labels, and limitations.
+- **Paper Blue** (`oklch(97.2% 0.008 248)`): the page field in light mode.
+- **Panel Blue** (`oklch(93.4% 0.011 250)`): control groups and table headers.
+- **Card Blue** (`oklch(99.2% 0.004 248)`): inputs, active tabs, and bounded surfaces.
+- **Primary Ink** (`oklch(20% 0.030 262)`): headings and source identities.
+- **Secondary Ink** (`oklch(38% 0.026 258)`): body copy and evidence descriptions.
+- **Muted Ink** (`oklch(54% 0.018 252)`): metadata, labels, and limitations.
 
 ### Named Rules
 
@@ -183,10 +212,10 @@ The palette is restrained: cool blue paper and ink, one evidence-blue link accen
 
 ### Hierarchy
 
-- **Headline** (710, 35px desktop / 27px narrow, 1.13): selected case declaration.
-- **Title** (680, 20px, 1.35): the three case findings.
-- **Body** (400, 15.5px, 1.66): explanations, capped near 70 characters where prose permits.
-- **Label** (700, 10px, 0.08em, uppercase): authority, pilot, and protocol context.
+- **Headline** (670, 27px, 1.2): selected case identity and primary method title.
+- **Title** (640, 15px, 1.5): section headings and evidence names.
+- **Body** (400, 15px, 1.5): explanations, capped near 70 characters where prose permits.
+- **Label** (700, 11px, 0.075em, uppercase): authority, pilot, and protocol context.
 - **Hash** (400, 11px): commits, roots, and digests with wrap-anywhere behavior.
 
 ### Named Rules
@@ -195,11 +224,11 @@ The palette is restrained: cool blue paper and ink, one evidence-blue link accen
 
 ## 4. Elevation
 
-The system is flat by default. Depth comes from tonal layers and 1px rules. A
-restrained shadow appears only on transient menus.
+The system is flat by default. Depth comes from tonal layers and 1px rules. A restrained shadow appears only on transient menus and the active tab, where it clarifies interaction state.
 
 ### Shadow Vocabulary
 
+- **Active Tab** (`0 1px 2px color-mix(in oklab, var(--ink0) 12%, transparent)`): a minimal state cue inside the tab rail.
 - **Filter Menu** (`0 8px 24px color-mix(in oklab, var(--ink0) 18%, transparent)`): separates an open popover from dense table content.
 
 ### Named Rules
@@ -210,22 +239,20 @@ restrained shadow appears only on transient menus.
 
 ### Buttons
 
-- **Primary case actions:** ordinary source links, not command buttons.
-- **Secondary navigation:** underlined text buttons with no filled surface.
-- **Queue controls:** compact 7px to 8px controls only inside secondary tools.
+- **Shape:** gently compact controls (7px to 8px radius).
+- **Primary:** there is no persistent primary action on the evidence surface.
 - **Hover / Focus:** quiet tonal hover and a 2px Evidence Blue focus outline.
+- **Ghost:** filters and clear actions use plain or card-blue surfaces with standard text labels.
 
-### Badges and Chips
+### Chips
 
-The primary case route uses no badges or chips. Typed outcome markers appear
-only inside expanded evidence detail, where text carries the meaning and color
-is supplemental.
+- **Style:** 999px status chips with a visible text label, 7px state dot, card-blue fill, and full neutral border.
+- **State:** green means current or pass, red means stale or error, amber means open or pending, and gray means neutral. Color never stands alone.
 
 ### Cards / Containers
 
-- **Corner Style:** 9px for transient menus; 12px for secondary table scroll frames.
-- **Background:** Paper Blue holds the page; Card Blue is reserved for controls,
-  tables, and secondary tools.
+- **Corner Style:** 10px for the authority boundary and empty maintainer disposition; 12px for table scroll frames.
+- **Background:** Paper Blue holds the page, Card Blue holds bounded controls and tables.
 - **Shadow Strategy:** flat at rest.
 - **Border:** 1px neutral full borders. Colored side stripes are forbidden.
 - **Internal Padding:** 11px to 16px for bounded surfaces; evidence rows use 14px vertical rhythm without a card wrapper.
@@ -238,34 +265,7 @@ is supplemental.
 
 ### Navigation
 
-The current case is the default and only persistent task. A small native
-disclosure labeled Other tools contains queue, all-PR, inventory, discovery,
-fidelity, and method views. Secondary views always expose a Current case return
-link. There are no persistent tabs or dashboard metrics on the case route.
-
-### Case Findings
-
-The selected declaration and exact source link lead into a compact sentence
-that names freshness, advisory state, and maintainer-decision state. Three
-separated sections then explain what happened, the advisory finding, and the
-unfilled maintainer decision. These states never collapse into one verdict.
-
-### Progressive Disclosure
-
-Evidence rows and replay pins, preservation mechanics, and protocol/non-goals
-use native `details` controls. They remain keyboard accessible and collapsed by
-default. This follows Shadcn-style Accordion/Collapsible discipline without
-adding a component framework to the single-file static runtime.
-
-### Triage Queue
-
-Ready-for-review pull requests appear first, longest waiting first. Waiting on
-author, approval recorded, and draft states remain available in collapsed
-groups. Desktop uses the dense table; mobile uses compact review rows with PR,
-title, CI, author, waiting time, churn, and advisory audit state.
-
-The responsive switch is a 760px workbench container query, so the same compact
-layout activates in a narrow app panel as well as a phone viewport.
+Tabs sit in one Panel Blue rail. The active tab uses Card Blue, stronger ink, and a minimal shadow. Reviewer-facing labels are `Review queue`, `Selected case`, `All open PRs`, `Find a case`, `Fidelity`, `Evidence`, and `Method`. At narrow widths the rail scrolls horizontally and labels never wrap.
 
 ### Evidence Row
 
@@ -278,10 +278,8 @@ Each row has a claim name, source plus limitation, and typed outcome. Desktop us
 - **Do** keep Formal Conjectures authority visible at every decision boundary.
 - **Do** show exact source identities, environments, roots, hashes, and typed outcomes close to each claim.
 - **Do** preserve error, unavailable, stale, and not-evaluated as different states.
-- **Do** use familiar links, disclosures, separators, focus states, and system typography.
+- **Do** use familiar tables, tabs, focus states, and system typography.
 - **Do** keep evidence rows flat and readable from 390px through wide review monitors.
-- **Do** answer case status through one sentence and three findings before exposing replay internals.
-- **Do** put actionable review work before non-actionable queue states.
 
 ### Don't:
 
@@ -291,40 +289,3 @@ Each row has a claim name, source plus limitation, and typed outcome. Desktop us
 - **Don't** create a new problem registry, proof repository, or Vela-owned source of truth.
 - **Don't** show fake partner or integration logos, especially Econlib.
 - **Don't** use colored side-stripe borders, gradient text, decorative glass, nested cards, or identical card grids.
-- **Don't** make method, architecture, hashes, or inventory compete with the
-  selected case and its review boundary.
-
-## 7. Final Impeccable Audit
-
-The 2026-08-17 release gate used an independent design assessment plus
-deterministic browser, Lighthouse, responsive, and contract checks. Scores are
-deductions from 100, not a restatement of Lighthouse categories.
-
-| Dimension | Score | Evidence and deductions |
-| --- | ---: | --- |
-| Hierarchy | 98 | The exact PR and declaration, one tri-state sentence, and three numbered findings form a single reading path. Two points are reserved because the product identity and authority line still precede the case. |
-| Information architecture | 97 | Other tools has four choices. Replay outcomes, exact pins, non-claims, preservation, and method are progressively disclosed. Three points are reserved for the retained secondary queue surface. |
-| Clarity | 97 | Visible copy states metadata pass, execution error, no proof-property conclusion, inconclusive advisory finding, and unrecorded maintainer decision in ordinary language. Three points are reserved for unavoidable domain terms such as metadata and replay. |
-| Interaction and accessibility | 97 | Lighthouse accessibility is 100. Keyboard focus, skip navigation, native disclosures, Escape and outside dismissal, semantic headings and regions, 44px mobile controls, and text-carried states were verified. Three points are reserved for the denser secondary data tables. |
-| Responsive behavior | 96 | Browser checks at 1280x900, 390x844, and 320x720 show no horizontal overflow. The mobile menu reflows instead of covering the case, and exact hashes remain nested. Four points are reserved for long secondary queue and evidence views on a phone. |
-| Visual craft | 98 | One 760px reading column, restrained OKLCH color, system typography, hairline separators, light and dark themes, and no cards, gradients, glass, hero metrics, or decorative badges. Two points are reserved for the intentionally ordinary native aesthetic. |
-
-The first independent pass scored information architecture 93, clarity 90,
-interaction and accessibility 93, and responsive behavior 94. The release pass
-removed parser and policy jargon, reduced the six-choice utility menu to four,
-made menu targets 44px, added Escape and outside dismissal, removed the broad
-live region, made the mobile menu reflow, split typed outcomes from collapsed
-exact pins, and added a direct upstream continuation link. A second independent
-browser pass found no remaining dimension below 95.
-
-The generated page is about 420 KB uncompressed and 59 KB with gzip. Compact
-embedded data improved local throttled Lighthouse performance from 89 to 91.
-After deployment, the public GitHub Pages response was verified with gzip and
-scored 99 performance, 100 accessibility, and 100 best practices in Lighthouse,
-with 1.1 s FCP/LCP, 0 ms total blocking time, and no browser-console errors.
-
-The final deterministic Impeccable scan reports one warning and no other
-findings. Its flat-type-hierarchy warning samples the utility sizes 12px through
-19px and omits the case hierarchy. The primary route uses 35px, 20px, and 15.5px
-steps, ratios of 1.75 and 1.29, so the warning is a verified false positive for
-the secondary product controls rather than an unresolved release issue.

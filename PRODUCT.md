@@ -21,22 +21,7 @@ Formal Conjectures maintainers and technically fluent reviewers who need to insp
 
 ## Product Purpose
 
-Provide a bounded review, verification, and preservation loop for one calibration case at a time: identify the exact Formal Conjectures source and revision, expose pinned evidence and typed outcomes, distinguish checked facts from errors and interpretation, leave maintainer disposition explicitly unfilled, and make drift or recurrence visible. Success means a reviewer can understand the evidence and its limits quickly, then return to Formal Conjectures for every authoritative action.
-
-## First-Screen Contract
-
-The default route is one case note, not a dashboard. A first-time reviewer sees
-the exact Formal Conjectures case and source, then one sentence stating evidence
-freshness, advisory review status, and whether a maintainer decision is recorded.
-The body has exactly three sequential findings:
-
-1. What happened.
-2. Review finding.
-3. Maintainer decision.
-
-Queues, inventories, replay internals, hashes, tool pins, recurrence mechanics,
-and protocol material are secondary links or collapsed native disclosures. They
-remain inspectable without competing with the case decision path.
+Provide a review workbench over Formal Conjectures pull requests plus a bounded review, verification, and preservation loop for one calibration case. The queue helps reviewers triage what is ready; the selected case identifies the exact source and revision, exposes pinned evidence and typed outcomes, distinguishes checked facts from errors and interpretation, leaves maintainer disposition explicitly unfilled, and makes drift or recurrence visible. Success means a reviewer can understand the work and its limits quickly, then return to Formal Conjectures for every authoritative action.
 
 ## Brand Personality
 
@@ -57,10 +42,15 @@ Forensic, calm, and accountable. The interface should feel like a well-kept lab 
 - Unknown is a first-class state: errors, unavailable evidence, staleness, and unfilled maintainer disposition remain distinct.
 - Reduce maintainer reading time: one selected calibration case, strong information hierarchy, progressive detail, and direct upstream links.
 - Preserve provenance without creating a silo: the board is a disposable advisory projection over source-owned records.
-- Keep the current case primary. Queue, inventory, discovery, fidelity, and
-  method views are secondary tools rather than persistent navigation.
-- Put actionable review work before approval-recorded, author-blocked, and draft
-  queues; keep those states available but collapsed by default.
+
+## First-Screen Contract
+
+The default route is the information-rich **Review queue**, not a landing page
+or a one-case narrative. It must immediately state what the table is for, place
+ready-for-review work first, and expose familiar search, filters, grouped tables,
+CI state, approvals, queue age, and advisory audit evidence. The **Selected
+case** remains a first-class tab for the deeper pinned ReviewReport. Evidence,
+method, and fidelity views support the workbench; they do not replace it.
 
 ## Accessibility & Inclusion
 

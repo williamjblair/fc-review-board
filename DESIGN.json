@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-17T23:50:00Z",
+  "generatedAt": "2026-08-18T01:10:00Z",
   "title": "Design System: Open Formal Workflows: Formal Conjectures Review, Verification & Preservation",
   "extensions": {
     "colorMeta": {
@@ -10,17 +10,23 @@
         "canonical": "oklch(40% 0.072 252)",
         "tonalRamp": ["oklch(15% 0.03 252)", "oklch(25% 0.05 252)", "oklch(35% 0.065 252)", "oklch(45% 0.072 252)", "oklch(57% 0.065 252)", "oklch(70% 0.05 252)", "oklch(84% 0.025 252)", "oklch(95% 0.009 252)"]
       },
+      "evidence-blue-dark": {
+        "role": "primary",
+        "displayName": "Evidence Blue Dark",
+        "canonical": "rgb(144, 174, 207)",
+        "tonalRamp": ["rgb(144, 174, 207)"]
+      },
       "paper-blue": {
         "role": "neutral",
         "displayName": "Paper Blue",
-        "canonical": "oklch(97.6% 0.006 238)",
-        "tonalRamp": ["oklch(15% 0.008 238)", "oklch(27% 0.008 238)", "oklch(39% 0.008 238)", "oklch(52% 0.008 238)", "oklch(65% 0.008 238)", "oklch(77% 0.008 238)", "oklch(89% 0.007 238)", "oklch(97.6% 0.006 238)"]
+        "canonical": "oklch(97.2% 0.008 248)",
+        "tonalRamp": ["oklch(15% 0.008 248)", "oklch(27% 0.008 248)", "oklch(39% 0.008 248)", "oklch(52% 0.008 248)", "oklch(65% 0.008 248)", "oklch(77% 0.008 248)", "oklch(89% 0.008 248)", "oklch(97.2% 0.008 248)"]
       },
       "ink-primary": {
         "role": "neutral",
         "displayName": "Primary Ink",
-        "canonical": "oklch(19% 0.024 258)",
-        "tonalRamp": ["oklch(15% 0.024 258)", "oklch(25% 0.022 258)", "oklch(37% 0.020 258)", "oklch(49% 0.018 258)", "oklch(61% 0.015 258)", "oklch(73% 0.012 258)", "oklch(85% 0.009 258)", "oklch(95% 0.005 258)"]
+        "canonical": "oklch(20% 0.030 262)",
+        "tonalRamp": ["oklch(15% 0.03 262)", "oklch(25% 0.028 262)", "oklch(37% 0.024 262)", "oklch(49% 0.02 262)", "oklch(61% 0.016 262)", "oklch(73% 0.013 262)", "oklch(85% 0.01 262)", "oklch(95% 0.006 262)"]
       },
       "outcome-pass": {
         "role": "semantic",
@@ -41,23 +47,32 @@
       "label": {"displayName": "Protocol Label", "purpose": "Authority and provenance context."}
     },
     "shadows": [
+      {"name": "active-tab", "value": "0 1px 2px color-mix(in oklab, var(--ink0) 12%, transparent)", "purpose": "Active state inside the tab rail."},
       {"name": "filter-menu", "value": "0 8px 24px color-mix(in oklab, var(--ink0) 18%, transparent)", "purpose": "Transient filter popover only."}
     ],
     "motion": [
       {"name": "state-fast", "value": "120ms ease-out", "purpose": "Hover, active, and menu state transitions."}
     ],
     "breakpoints": [
-      {"name": "workbench-narrow", "value": "container <= 760px"}
+      {"name": "narrow", "value": "600px"}
     ]
   },
   "components": [
     {
-      "name": "Secondary Text Button",
-      "kind": "button",
-      "refersTo": "text-button",
-      "description": "Quiet navigation to non-primary review tools.",
-      "html": "<button class=\"ds-text-button\" type=\"button\">Review queue</button>",
-      "css": ".ds-text-button { padding: 2px 0; border: 0; background: transparent; color: var(--accent); font: 12px/1.5 system-ui, sans-serif; text-decoration: underline; text-underline-offset: 3px; } .ds-text-button:hover { color: var(--ink0); } .ds-text-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }"
+      "name": "Active Tab",
+      "kind": "nav",
+      "refersTo": "tab-active",
+      "description": "Current evidence view inside the compact tab rail.",
+      "html": "<button class=\"ds-tab-active\" aria-selected=\"true\">Pilot</button>",
+      "css": ".ds-tab-active { font: 640 13px/1.5 system-ui, sans-serif; padding: 4px 13px; border: 0; border-radius: 7px; background: var(--card); color: var(--ink0); box-shadow: 0 1px 2px color-mix(in oklab, var(--ink0) 12%, transparent); } .ds-tab-active:hover { color: var(--accent); } .ds-tab-active:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }"
+    },
+    {
+      "name": "Current Status Chip",
+      "kind": "chip",
+      "refersTo": "status-chip",
+      "description": "Text plus color marker for evidence freshness.",
+      "html": "<span class=\"ds-state-current\"><span aria-hidden=\"true\"></span>Evidence head current</span>",
+      "css": ".ds-state-current { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border: 1px solid var(--rule2); border-radius: 999px; background: var(--card); color: var(--ink1); font: 640 11.5px/1.5 system-ui, sans-serif; } .ds-state-current span { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }"
     },
     {
       "name": "Search Input",
@@ -70,42 +85,28 @@
     {
       "name": "Authority Boundary",
       "kind": "custom",
-      "description": "Persistent one-sentence authority statement above every view.",
-      "html": "<p class=\"ds-boundary\"><strong>Advisory evidence only.</strong> Formal Conjectures is canonical for declarations, pull requests, CI, and maintainer decisions.</p>",
-      "css": ".ds-boundary { max-width: 760px; margin: 0 auto; padding: 13px 0; border-bottom: 1px solid var(--rule); color: var(--ink2); font: 12px/1.5 system-ui, sans-serif; } .ds-boundary strong { color: var(--ink1); }"
+      "description": "Persistent scope statement above every view.",
+      "html": "<div class=\"ds-boundary\"><strong>Authority boundary</strong><span>Formal Conjectures owns declarations, PR state, CI, and maintainer decisions.</span></div>",
+      "css": ".ds-boundary { display: flex; align-items: flex-start; gap: 12px; padding: 11px 13px; border: 1px solid var(--rule2); border-radius: 10px; background: color-mix(in oklab, var(--accent) 5%, var(--card)); color: var(--ink1); font: 12.5px/1.5 system-ui, sans-serif; } .ds-boundary strong { color: var(--ink0); font-size: 12px; letter-spacing: .035em; text-transform: uppercase; }"
     },
     {
       "name": "Evidence Row",
       "kind": "custom",
       "description": "Claim, source with limitation, and typed outcome in reading order.",
       "html": "<div class=\"ds-evidence-row\"><strong>Comparator invocation</strong><span><a href=\"#\">Pinned execution source</a><small>nonzero_exit; exit code 1</small></span><b><i aria-hidden=\"true\"></i>error</b></div>",
-      "css": ".ds-evidence-row { display: grid; grid-template-columns: 150px minmax(260px, 1fr) 126px; gap: 22px; padding: 13px 0; border-bottom: 1px solid var(--rule); color: var(--ink1); font: 14px/1.5 system-ui, sans-serif; } .ds-evidence-row strong { color: var(--ink0); } .ds-evidence-row small { display: block; color: var(--ink2); } .ds-evidence-row b { display: inline-flex; align-items: center; gap: 7px; color: var(--bad); font-size: 12px; } .ds-evidence-row i { width: 8px; height: 8px; border-radius: 50%; background: var(--bad); } .ds-evidence-row a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }"
-    },
-    {
-      "name": "Case Finding",
-      "kind": "custom",
-      "description": "One of the three sequential case conclusions, separated by a hairline rule.",
-      "html": "<section class=\"ds-finding\"><h3>2. Review finding</h3><p><strong>Inconclusive.</strong> The replay did not reach a policy verdict.</p></section>",
-      "css": ".ds-finding { padding: 28px 0 30px; border-bottom: 1px solid var(--rule2); } .ds-finding h3 { margin: 0 0 10px; font: 680 20px/1.35 system-ui, sans-serif; } .ds-finding p { max-width: 68ch; margin: 0; color: var(--ink1); font: 15.5px/1.66 system-ui, sans-serif; }"
-    },
-    {
-      "name": "Progressive Disclosure",
-      "kind": "custom",
-      "description": "Native Accordion/Collapsible primitive for evidence, preservation, and method content.",
-      "html": "<details class=\"ds-disclosure\"><summary><strong>Evidence and replay details</strong><span>Typed outcomes and exact revisions</span></summary></details>",
-      "css": ".ds-disclosure { border-bottom: 1px solid var(--rule2); } .ds-disclosure summary { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; padding: 15px 0; cursor: pointer; } .ds-disclosure summary span { color: var(--ink2); font-size: 12px; } .ds-disclosure summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }"
+      "css": ".ds-evidence-row { display: grid; grid-template-columns: .8fr 2fr .7fr; gap: 20px; padding: 14px 0; border-bottom: 1px solid var(--rule); color: var(--ink1); font: 14px/1.5 system-ui, sans-serif; } .ds-evidence-row strong { color: var(--ink0); } .ds-evidence-row small { display: block; color: var(--ink2); } .ds-evidence-row b { display: inline-flex; align-items: center; gap: 7px; color: var(--bad); font-size: 12px; } .ds-evidence-row i { width: 8px; height: 8px; border-radius: 50%; background: var(--bad); } .ds-evidence-row a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }"
     }
   ],
   "narrative": {
-    "northStar": "The Case Note",
-    "overview": "One exact pull request presented as a short case note. A status sentence and three sequential findings appear before replay internals or protocol.",
-    "keyCharacteristics": ["Task-first and calm", "One status sentence", "Three sequential findings", "Exact identities before interpretation", "No persistent dashboard navigation"],
+    "northStar": "The Review Workbench",
+    "overview": "The recovered information-rich Formal Conjectures review board: a familiar triage workbench with exact evidence, bounded advisory claims, and direct upstream paths for every authoritative action.",
+    "keyCharacteristics": ["Queue-first and information-rich", "Exact identities before interpretation", "Unknown states remain visible", "Familiar tables and restrained controls", "Responsive without page overflow"],
     "rules": [
       {"name": "The Evidence Color Rule", "body": "Semantic color describes only the state named beside it and never implies acceptance.", "section": "colors"},
       {"name": "The Identity First Rule", "body": "PRs, declarations, commits, roots, and paths remain readable text.", "section": "typography"},
       {"name": "The Flat Evidence Rule", "body": "Evidence rows, reports, and method steps use rules, not decorative shadow or glass.", "section": "elevation"}
     ],
-    "dos": ["Do keep Formal Conjectures authority visible", "Do answer case status through three sequential findings", "Do show exact source and environment identities close to claims", "Do preserve error, unavailable, stale, and not-evaluated as distinct states"],
-    "donts": ["Don't make method compete with the selected case", "Don't resemble a generic AI-agent control plane", "Don't collapse evidence into approval or merge readiness", "Don't create a Vela-owned source of truth", "Don't show fake partner or Econlib integration logos"]
+    "dos": ["Do keep Formal Conjectures authority visible", "Do show exact source and environment identities close to claims", "Do preserve error, unavailable, stale, and not-evaluated as distinct states"],
+    "donts": ["Don't resemble a generic AI-agent control plane", "Don't collapse evidence into approval or merge readiness", "Don't create a Vela-owned source of truth", "Don't show fake partner or Econlib integration logos"]
   }
 }
