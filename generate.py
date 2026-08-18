@@ -454,15 +454,16 @@ def main() -> None:
         "hasPrAudit": bool(joined_pr_audits), "hasPrAuditFeed": bool(pr_audits),
         "hasIssues": bool(issues), "hasPilot": pilot_bundle is not None,
     }
-    data = json.dumps(records, ensure_ascii=False).replace("</", "<\\/")
+    compact = {"ensure_ascii": False, "separators": (",", ":")}
+    data = json.dumps(records, **compact).replace("</", "<\\/")
     doc = (TEMPLATE
            .replace("__DATA__", data)
-           .replace("__PR_AUDITS__", json.dumps(list(pr_audits.values()), ensure_ascii=False)
+           .replace("__PR_AUDITS__", json.dumps(list(pr_audits.values()), **compact)
                     .replace("</", "<\\/"))
-           .replace("__PILOT__", json.dumps(pilot_bundle, ensure_ascii=False)
+           .replace("__PILOT__", json.dumps(pilot_bundle, **compact)
                     .replace("</", "<\\/"))
-           .replace("__ISSUES__", json.dumps(issues, ensure_ascii=False).replace("</", "<\\/"))
-           .replace("__META__", json.dumps(meta).replace("</", "<\\/"))
+           .replace("__ISSUES__", json.dumps(issues, **compact).replace("</", "<\\/"))
+           .replace("__META__", json.dumps(meta, **compact).replace("</", "<\\/"))
            .replace("__STAMP__", meta["generated"])
            .replace("__FC_REPO__", FC_REPO_URL)
            .replace("__FC_SITE__", FC_SITE_URL)
@@ -502,6 +503,7 @@ TEMPLATE = r"""<!doctype html>
 <meta property="og:title" content="Open Formal Workflows | Formal Conjectures Review, Verification &amp; Preservation">
 <meta property="og:description" content="A bounded advisory evidence pilot for Formal Conjectures review, verification, and preservation.">
 <meta property="og:url" content="__BOARD_SITE__">
+<link rel="icon" href="data:,">
 <style>
 :root {
   /* Restrained evidence palette: cool paper, one blue link accent, and semantic
@@ -537,7 +539,7 @@ TEMPLATE = r"""<!doctype html>
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 body { margin: 0; background: var(--paper); color: var(--ink0);
-  font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased; }
 .wrap { container-type: inline-size; max-width: 1216px; margin: 0 auto; padding: 26px 28px 72px; }
 a { color: var(--accent); }
@@ -545,7 +547,7 @@ a { color: var(--accent); }
 main:focus { outline: none; }
 
 .topbar { display: flex; align-items: center; justify-content: space-between; gap: 24px;
-  padding-bottom: 19px; border-bottom: 1px solid var(--rule); }
+  padding-bottom: 18px; border-bottom: 1px solid var(--rule); }
 h1 { display: flex; align-items: baseline; gap: 12px; margin: 0; }
 h1 .product-name { font-size: 19px; font-weight: 700; letter-spacing: -.018em; }
 h1 .h1-sub { color: var(--ink2); font-size: 12px; font-weight: 520; letter-spacing: .015em; }
@@ -553,37 +555,28 @@ h1 .h1-sub { color: var(--ink2); font-size: 12px; font-weight: 520; letter-spaci
 .source-nav a { color: var(--ink1); text-decoration: none; }
 .source-nav a:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 .updated { white-space: nowrap; }
-.boundary { display: flex; align-items: center; gap: 9px 12px; min-height: 38px;
-  padding: 9px 0; border-bottom: 1px solid var(--rule); color: var(--ink2); font-size: 12px; }
-.boundary-tag { flex: 0 0 auto; color: var(--ink0); font-size: 10px; font-weight: 760;
-  letter-spacing: .075em; text-transform: uppercase; }
-.boundary-text { max-width: 82ch; }
-.boundary-link { margin-left: auto; padding: 3px 0; border: 0; background: none; color: var(--accent);
-  font: inherit; cursor: pointer; white-space: nowrap; text-decoration: underline; text-underline-offset: 3px; }
-.boundary-link:hover { color: var(--ink0); }
-
-.appnav { display: flex; align-items: center; justify-content: space-between; gap: 14px;
-  padding: 9px 0 0; border-bottom: 1px solid var(--rule2); }
-.tabs { display: flex; gap: 4px; }
-.tab { position: relative; padding: 9px 11px 10px; border: 0; background: none; color: var(--ink2);
-  font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
-.tab::after { content: ""; position: absolute; left: 11px; right: 11px; bottom: -1px; height: 2px;
-  background: transparent; }
-.tab:hover { color: var(--ink0); }
-.tab.active { color: var(--ink0); font-weight: 680; }
-.tab.active::after { background: var(--accent); }
+.authority-line { max-width: 760px; margin: 0 auto; padding: 13px 0; color: var(--ink2);
+  font-size: 12px; border-bottom: 1px solid var(--rule); }
+.authority-line strong { color: var(--ink1); }
 .view-more { position: relative; }
-.view-more summary { list-style: none; padding: 8px 2px 10px; color: var(--ink2); font-size: 13px;
+.view-more summary { list-style: none; padding: 5px 0; color: var(--ink1); font-size: 12px;
   cursor: pointer; }
 .view-more summary::-webkit-details-marker { display: none; }
-.view-more summary::after { content: "⌄"; margin-left: 6px; color: var(--ink2); }
-.view-more[open] summary, .view-more.is-active summary { color: var(--ink0); }
+.view-more summary::after { content: "⌄"; margin-left: 5px; color: var(--ink2); }
+.view-more[open] summary { color: var(--ink0); }
 .more-menu { position: absolute; z-index: 30; right: 0; top: calc(100% + 7px); width: 210px;
-  padding: 6px; border: 1px solid var(--rule2); border-radius: 9px; background: var(--card);
-  box-shadow: 0 12px 30px color-mix(in oklab, var(--ink0) 16%, transparent); }
-.more-tab { display: block; width: 100%; padding: 8px 9px; border: 0; border-radius: 6px;
+  padding: 6px; border: 1px solid var(--rule2); border-radius: 9px; background: var(--card); }
+.more-tab { display: flex; align-items: center; width: 100%; min-height: 44px; padding: 10px 9px; border: 0; border-radius: 6px;
   background: none; color: var(--ink1); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
 .more-tab:hover, .more-tab.active { color: var(--ink0); background: var(--panel); }
+.secondary-back { display: inline-flex; align-items: center; gap: 5px; margin-top: 22px; padding: 4px 0;
+  border: 0; background: none; color: var(--accent); font: inherit; font-size: 12.5px;
+  cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.secondary-back:hover { color: var(--ink0); }
+.related-tools { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; }
+.related-tools button { padding: 2px 0; border: 0; background: none; color: var(--accent);
+  font: inherit; font-size: 12px; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.related-tools button:hover { color: var(--ink0); }
 
 /* Overview: a slim typographic row, not a filled card. */
 .strip { display: flex; flex-wrap: wrap; align-items: baseline; gap: 9px 22px;
@@ -750,57 +743,28 @@ tbody tr:hover { background: color-mix(in oklab, var(--hover) 4%, transparent); 
 .audit-record ul { margin: 12px 0; padding-left: 22px; color: var(--ink1); line-height: 1.65; }
 .audit-record p { margin: 0; overflow-wrap: anywhere; text-align: left; white-space: normal; }
 
-/* The case view answers identity, freshness, evidence, advisory result, and
-   maintainer disposition before exposing implementation detail. */
+/* The primary route is a case note, not a dashboard. Three sequential findings
+   remain visible; every implementation detail is behind a native disclosure. */
 .eyebrow { margin: 0 0 6px; color: var(--ink2); font-size: 10px; font-weight: 760;
   letter-spacing: .08em; text-transform: uppercase; }
-.case-header { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(300px, .75fr);
-  gap: 54px; padding: 36px 0 28px; border-bottom: 1px solid var(--rule2); }
-.case-intro h2 { margin: 0; max-width: 30ch; font-size: 31px; line-height: 1.14;
-  letter-spacing: -.028em; font-weight: 710; }
-.case-intro h2 a { color: var(--ink0); text-decoration-thickness: 1px; text-underline-offset: 4px; }
-.case-title { max-width: 68ch; margin: 13px 0 0; color: var(--ink1); font-size: 15px; }
-.case-selection { max-width: 70ch; margin: 6px 0 0; color: var(--ink2); font-size: 13px; }
-.case-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 9px 15px; margin-top: 20px; }
-.case-actions a { font-size: 12.5px; font-weight: 620; text-decoration: none; }
-.case-actions a:not(.primary-link) { border-bottom: 1px solid var(--rule2); }
-.primary-link { padding: 7px 11px; border-radius: 7px; background: var(--ink0); color: var(--card); }
-.primary-link:hover { background: var(--accent); color: var(--card); }
-.review-summary { margin: 0; border-top: 1px solid var(--rule2); }
-.review-summary > div { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 12px;
-  padding: 12px 0; border-bottom: 1px solid var(--rule); }
-.review-summary dt { color: var(--ink2); font-size: 11.5px; }
-.review-summary dd { margin: 0; }
-.review-summary strong { display: block; color: var(--ink0); font-size: 15px; }
-.review-summary small { display: block; margin-top: 2px; color: var(--ink2); font-size: 11.5px; }
-.review-summary .decision-pending strong { color: var(--brass); text-transform: capitalize; }
-.state { display: inline-flex; align-items: center; gap: 6px; color: var(--ink0);
-  font-size: 13px; font-weight: 680; }
-.state::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--stone); }
-.state--current::before { background: var(--ok); }
-.state--stale::before { background: var(--bad); }
-.state--open::before { background: var(--run); }
-
-.execution-note { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 22px;
-  margin: 22px 0 0; padding: 14px 16px; border: 1px solid color-mix(in oklab, var(--brass) 34%, var(--rule));
-  border-radius: 9px; background: color-mix(in oklab, var(--brass) 7%, var(--card)); }
-.execution-note strong { color: var(--ink0); }
-.execution-note p { max-width: 74ch; margin: 0; color: var(--ink1); }
-.pilot-section { margin: 34px 0 0; }
-.pilot-section-h { display: flex; align-items: end; justify-content: space-between;
-  gap: 18px; padding-bottom: 10px; border-bottom: 1px solid var(--rule2); }
-.pilot-section-h h3 { margin: 0; font-size: 18px; letter-spacing: -.015em; }
-.pilot-section-h p { max-width: 56ch; margin: 0; color: var(--ink2); font-size: 12px; text-align: right; }
-.evidence-path { display: grid; grid-template-columns: repeat(5, 1fr); margin: 20px 0 28px; padding: 0;
-  list-style: none; counter-reset: evidence; }
-.evidence-path li { position: relative; min-width: 0; padding: 26px 18px 0 0; border-top: 1px solid var(--rule2); }
-.evidence-path li::before { counter-increment: evidence; content: counter(evidence); position: absolute;
-  top: -12px; left: 0; display: grid; place-items: center; width: 23px; height: 23px;
-  border: 1px solid var(--rule2); border-radius: 50%; background: var(--paper); color: var(--ink2);
-  font: 680 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
-.evidence-path strong, .evidence-path small { display: block; }
-.evidence-path strong { font-size: 12.5px; }
-.evidence-path small { margin-top: 3px; color: var(--ink2); font-size: 11px; }
+.pilot { max-width: 760px; margin: 0 auto; }
+.case-header { padding: 44px 0 28px; }
+.case-header h2 { margin: 0; font-size: 35px; line-height: 1.13;
+  letter-spacing: -.03em; font-weight: 710; }
+.case-header h2 a { color: var(--ink0); text-decoration-thickness: 1px; text-underline-offset: 5px; }
+.case-source { margin: 9px 0 0; color: var(--ink2); font-size: 13px; }
+.case-source a { text-underline-offset: 3px; }
+.status-sentence { margin: 23px 0 0; color: var(--ink1); font-size: 16px; line-height: 1.65; }
+.status-sentence strong { color: var(--ink0); }
+.status-sentence .needs-attention { color: var(--brass); }
+.finding-list { border-top: 1px solid var(--rule2); }
+.finding { margin: 0; padding: 28px 0 30px; border-bottom: 1px solid var(--rule2); }
+.finding h3 { margin: 0 0 10px; font-size: 20px; letter-spacing: -.018em; }
+.finding p { max-width: 68ch; margin: 0; color: var(--ink1); font-size: 15.5px; line-height: 1.66; }
+.finding p + p { margin-top: 9px; }
+.finding strong { color: var(--ink0); }
+.finding .advisory-value { color: var(--brass); }
+.finding-note { color: var(--ink2) !important; font-size: 12.5px !important; }
 .evidence-row { display: grid; grid-template-columns: 150px minmax(260px, 1fr) 126px;
   gap: 22px; align-items: start; padding: 13px 0; border-bottom: 1px solid var(--rule); }
 .evidence-name { font-weight: 650; }
@@ -815,29 +779,28 @@ tbody tr:hover { background: color-mix(in oklab, var(--hover) 4%, transparent); 
 .outcome--error::before { background: var(--bad); }
 .outcome--pending::before { background: var(--run); }
 
-.review-boundary { display: grid; grid-template-columns: 1fr 1fr; margin: 34px 0 0;
-  border-top: 1px solid var(--rule2); border-bottom: 1px solid var(--rule2); }
-.review-boundary > div { padding: 22px 28px 22px 0; }
-.review-boundary > div + div { padding-left: 28px; border-left: 1px solid var(--rule2); }
-.review-boundary h3 { margin: 0; font-size: 22px; letter-spacing: -.018em; }
-.review-boundary .advisory-value { color: var(--brass); text-transform: capitalize; }
-.review-boundary p:not(.eyebrow) { max-width: 52ch; margin: 7px 0 0; color: var(--ink1); }
-.review-boundary small { display: block; margin-top: 8px; color: var(--ink2); }
 .nonclaim-disclosure { margin-top: 14px; }
 .nonclaim-disclosure summary { color: var(--accent); font-size: 12px; cursor: pointer; }
 .nonclaims { margin: 10px 0 0; padding-left: 18px; color: var(--ink1); font-size: 12px; }
 .nonclaims li { margin: 5px 0; }
 
-.disclosure-stack { margin-top: 34px; border-top: 1px solid var(--rule2); }
+.disclosure-stack { margin-top: 28px; border-top: 1px solid var(--rule); }
 .disclosure { border-bottom: 1px solid var(--rule2); }
 .disclosure > summary { display: flex; align-items: baseline; justify-content: space-between; gap: 18px;
-  padding: 16px 0; cursor: pointer; list-style: none; }
+  padding: 15px 0; cursor: pointer; list-style: none; color: var(--ink1); }
 .disclosure > summary::-webkit-details-marker { display: none; }
 .disclosure > summary::after { content: "+"; margin-left: auto; color: var(--ink2); font-size: 18px; }
 .disclosure[open] > summary::after { content: "−"; }
-.disclosure > summary strong { font-size: 14px; }
+.disclosure > summary strong { font-size: 13px; }
 .disclosure > summary span { color: var(--ink2); font-size: 12px; }
 .disclosure-body { padding: 2px 0 24px; }
+.evidence-subsection h4 { margin: 0 0 4px; font-size: 13px; }
+.evidence-subsection > p { margin: 0 0 12px; color: var(--ink2); font-size: 12px; }
+.pin-disclosure { margin-top: 18px; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.pin-disclosure > summary { min-height: 46px; padding: 12px 0; color: var(--accent); font-size: 12.5px;
+  cursor: pointer; text-underline-offset: 3px; }
+.pin-disclosure[open] > summary { color: var(--ink0); }
+.pin-disclosure .fact-list { padding-bottom: 12px; }
 .inspection-links { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-bottom: 12px; }
 .inspection-links a { color: var(--accent); font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
 .fact-list { margin: 0; }
@@ -868,29 +831,27 @@ tbody tr:hover { background: color-mix(in oklab, var(--hover) 4%, transparent); 
 .method-grid li { margin: 7px 0; }
 @media (max-width: 760px) { .wrap { padding: 18px 16px 56px; } }
 @container (max-width: 760px) {
-  .topbar { align-items: flex-start; }
+  .topbar { align-items: flex-start; flex-wrap: nowrap; gap: 8px 10px; }
+  .topbar:has(.view-more[open]) { flex-wrap: wrap; }
   h1 { align-items: flex-start; flex-direction: column; gap: 1px; }
+  h1 .h1-sub { display: none; }
   .updated { display: none; }
-  .boundary { align-items: flex-start; flex-wrap: wrap; padding: 9px 0 11px; }
-  .boundary-text { flex: 1 1 240px; }
-  .boundary-link { margin-left: 0; }
-  .appnav { align-items: stretch; }
-  .tabs { display: grid; grid-template-columns: repeat(3, 1fr); flex: 1; }
-  .tab { padding-inline: 7px; }
-  .case-header { grid-template-columns: 1fr; gap: 28px; padding-top: 28px; }
-  .case-intro h2 { font-size: 26px; }
-  .execution-note { grid-template-columns: 1fr; gap: 5px; }
-  .pilot-section-h { align-items: flex-start; flex-direction: column; gap: 4px; }
-  .pilot-section-h p { text-align: left; }
-  .evidence-path { grid-template-columns: 1fr; margin-left: 11px; }
-  .evidence-path li { padding: 4px 0 18px 27px; border-top: 0; border-left: 1px solid var(--rule2); }
-  .evidence-path li::before { top: 0; left: -12px; }
+  .source-nav { gap: 8px; margin-left: auto; }
+  .source-nav > a { display: none; }
+  .view-more { position: static; }
+  .view-more[open] { width: 230px; }
+  .view-more summary { min-height: 44px; display: inline-flex; align-items: center; }
+  .more-menu { position: static; width: 100%; margin-top: 2px; box-shadow: none; }
+  .authority-line { padding-block: 11px; }
+  .case-header { padding-top: 32px; }
+  .case-header h2 { font-size: 27px; }
+  .status-sentence { font-size: 15px; }
+  .finding { padding-block: 24px 26px; }
+  .case-header h2 a, .case-source a, footer a { display: inline-flex; align-items: center; min-height: 44px; }
   .evidence-row { grid-template-columns: 1fr auto; gap: 4px 14px; }
   .evidence-source { grid-column: 1 / -1; grid-row: 2; }
   .outcome { grid-column: 2; grid-row: 1; }
-  .review-boundary { grid-template-columns: 1fr; }
-  .review-boundary > div { padding: 20px 0; }
-  .review-boundary > div + div { padding-left: 0; border-top: 1px solid var(--rule); border-left: 0; }
+  .disclosure > summary span { display: none; }
   .view-header { align-items: flex-start; flex-direction: column; gap: 10px; padding-top: 24px; }
   .view-summary { justify-content: flex-start; }
   .data-set > .scroll { display: none; }
@@ -909,13 +870,14 @@ tbody tr:hover { background: color-mix(in oklab, var(--hover) 4%, transparent); 
   .controls { position: static; }
   .search { width: 100%; }
   .search input { width: 100%; max-width: none; }
+  .search input, .fbtn, .clear-btn, .secondary-back, .related-tools button { min-height: 44px; }
   .filterbar { gap: 6px; }
   .audit-record-h { align-items: flex-start; flex-direction: column; gap: 8px; }
   .method-grid { grid-template-columns: 1fr; gap: 24px; }
   .fact { grid-template-columns: 1fr; gap: 3px; }
 }
 
-footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--rule);
+footer { max-width: 760px; margin: 40px auto 0; padding-top: 20px; border-top: 1px solid var(--rule);
   color: var(--ink2); font-size: 12px; line-height: 1.75; }
 footer p { margin: 0 0 8px; max-width: 82ch; }
 footer a { color: var(--ink1); text-decoration: none; border-bottom: 1px solid var(--rule2); }
@@ -924,11 +886,10 @@ footer a:hover { color: var(--accent); border-color: var(--accent); }
 </style></head>
 <body><a class="skip" href="#app">Skip to content</a><div class="wrap">
 <header class="topbar">
-  <h1><span class="product-name">Open Formal Workflows</span><span class="h1-sub">Formal Conjectures review workbench</span></h1>
-  <nav class="source-nav" aria-label="Source links"><span class="updated">Updated __STAMP__</span><a href="__FC_REPO__/pulls">Upstream PRs</a><a href="__BOARD_REPO__">Source</a></nav>
+  <h1 aria-label="Open Formal Workflows: Formal Conjectures Review, Verification and Preservation"><span class="product-name">Open Formal Workflows</span><span class="h1-sub">Formal Conjectures · Review, Verification &amp; Preservation</span></h1>
+  <nav class="source-nav" aria-label="Source and secondary tools"><span class="updated">Updated __STAMP__</span><a href="__FC_REPO__">FC source</a><details class="view-more" id="viewMore"><summary id="viewMoreLabel">Other tools</summary><div class="more-menu" id="moreViews"></div></details></nav>
 </header>
-<div class="boundary"><strong class="boundary-tag">Advisory workspace</strong><span class="boundary-text">Formal Conjectures is canonical for declarations, PR state, CI, and maintainer decisions. Evidence here never means approval or merge acceptance.</span><button class="boundary-link" type="button" data-switch-view="method">Authority &amp; method</button></div>
-<nav class="appnav" aria-label="Workspace views"><div class="tabs" id="tabs" role="tablist"></div><details class="view-more" id="viewMore"><summary id="viewMoreLabel">More</summary><div class="more-menu" id="moreViews"></div></details></nav>
+<p class="authority-line"><strong>Advisory evidence only.</strong> Formal Conjectures is canonical for declarations, pull requests, CI, and maintainer decisions.</p>
 <div id="strip" class="strip"></div>
 <div class="controls" id="controls">
   <div class="controls-row">
@@ -941,21 +902,11 @@ footer a:hover { color: var(--accent); border-color: var(--accent); }
     <span class="count" id="count"></span>
   </div>
 </div>
-<main id="app" tabindex="-1" aria-live="polite"></main>
+<main id="app" tabindex="-1"></main>
 <noscript><p class="empty">This board needs JavaScript to filter and render.
 See the open pull requests at <a href="__FC_REPO__/pulls">github.com/google-deepmind/formal-conjectures</a>.</p></noscript>
 <footer>
-  __PR_AUDIT_NOTE__
-  <p><strong>The audit column</strong> joins each Erd&#337;s-problem PR to the public fidelity audit:
-  whether the linked proof is machine-checked unconditional, rests on a named assumption, or carries a
-  signed reviewer verdict. It reports a fact next to the PR; the merge decision is the maintainer's.
-  <a href="__METHOD__">How the audit works &rarr;</a></p>
-  <p><strong>Ready for review</strong> = not draft, no changes requested, no merge conflict, CI not failing.
-  &check; counts approvals, &pm; is lines changed. &ldquo;CI pending&rdquo; marks PRs whose build has not run yet.
-  Filters and sort are shareable: they live in the page URL.</p>
-  <p>PR data via the GitHub API. Problem-audit data via the <a href="__FRONTIER__">Erd&#337;s frontier</a>
-  snapshot. In the spirit of mathlib's queueboard. An independent tool, not affiliated with the
-  formal-conjectures maintainers.</p>
+  <p>Open Formal Workflows is an independent advisory projection. Formal Conjectures remains authoritative.</p>
 </footer>
 </div>
 <script>
@@ -986,18 +937,17 @@ const FACETS = [
 ];
 
 const DEFAULT_VIEW = META.hasPilot ? 'pilot' : 'queue';
-const TAB_SPECS = [['pilot','Case review'],['queue','Review queue'],['all','All PRs'],['pick','Find a case'],['fidelity','Fidelity evidence'],['pr-audits','Evidence inventory'],['method','Method & authority']]
+const TAB_SPECS = [['pilot','Current case'],['queue','Review queue'],['all','All open PRs'],['pick','Find a case'],['fidelity','Fidelity evidence'],['pr-audits','Evidence inventory'],['method','Method and authority']]
   .filter(v => (v[0] !== 'pilot' && v[0] !== 'method' || META.hasPilot)
             && (v[0] !== 'fidelity' || META.hasAudit)
             && (v[0] !== 'pick' || META.hasIssues)
             && (v[0] !== 'pr-audits' || META.hasPrAuditFeed));
-const PRIMARY_VIEWS = new Set(['pilot','queue','all']);
 const DATA_VIEWS = new Set(['queue','all','pick','fidelity']);
 const FILTER_VIEWS = new Set(['queue','all','fidelity']);
 const state = {view:DEFAULT_VIEW, q:'', facets:{audit:new Set(), kind:new Set(), coll:new Set(), ci:new Set()}, sort:{col:'idle', dir:'desc'}};
 
 const el = id => document.getElementById(id);
-const app = el('app'), searchEl = el('search'), filterbarEl = el('filterbar'), tabsEl = el('tabs'), countEl = el('count');
+const app = el('app'), searchEl = el('search'), filterbarEl = el('filterbar'), countEl = el('count');
 const moreViewsEl = el('moreViews'), viewMoreEl = el('viewMore'), viewMoreLabelEl = el('viewMoreLabel');
 function esc(s){ const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
 function ciKey(r){ return r.ci === 'green' ? 'passing' : r.ci === 'failing' ? 'failing' : r.ci === 'running' ? 'running' : 'pending'; }
@@ -1108,7 +1058,10 @@ function renderQueue(recs){
   return header+primary+(secondary ? '<div class="queue-secondary" aria-label="Other pull request states">'+secondary+'</div>' : '');
 }
 function renderAll(recs){
+  const related = (META.hasIssues ? '<button type="button" data-switch-view="pick">Find a case</button>' : '')
+    +(META.hasAudit ? '<button type="button" data-switch-view="fidelity">Fidelity evidence</button>' : '');
   const header = '<header class="view-header"><div><p class="eyebrow">Repository view</p><h2>All open pull requests</h2><p>Search and sort the full upstream queue. Formal Conjectures remains authoritative for every PR state and decision.</p></div>'
+    +(related ? '<nav class="related-tools" aria-label="Related review tools">'+related+'</nav>' : '')+'</div>'
     +'<div class="view-summary"><span><strong>'+recs.length+'</strong> shown</span></div></header>';
   return header+(recs.length ? '<section>'+tableHtml(sortRecs(recs), true)+'</section>' : emptyState());
 }
@@ -1213,12 +1166,8 @@ function renderPilot(){
   const nonclaims = report.nonclaims.map(item => '<li>'+esc(humanize(item))+'</li>').join('');
   const disposition = report.maintainer_disposition == null ? 'Not recorded' : humanize(report.maintainer_disposition);
   const advisory = audit.advisory_synthesis.advisory;
-  const path = '<ol class="evidence-path" aria-label="Evidence and replay path">'
-    +'<li><strong>Source head</strong><small>'+(fresh?'current':'stale')+'</small></li>'
-    +'<li><strong>Proof conditions</strong><small>'+esc(humanize(metadata.outcome))+'</small></li>'
-    +'<li><strong>Workspace</strong><small>derived and pinned</small></li>'
-    +'<li><strong>Execution</strong><small>'+esc(humanize(typed.invocation.outcome))+'</small></li>'
-    +'<li><strong>Policy</strong><small>'+esc(humanize(typed.policy_result.outcome))+'</small></li></ol>';
+  const advisoryLabel = humanize(advisory);
+  const advisorySentence = advisoryLabel.charAt(0).toUpperCase()+advisoryLabel.slice(1);
   const facts = '<dl class="fact-list">'
     +fact('PR head','<a href="'+links.head+'">'+hash(audit.head.commit_oid)+'</a>')
     +fact('Audit core',hash(audit.core.root)+'<br>'+hash(audit.core.sha256))
@@ -1235,28 +1184,23 @@ function renderPilot(){
     +fact('Manifest bindings','outcome '+hash(PILOT.execution.outcome_sha256)+'<br>preparation '+hash(PILOT.execution.preparation_sha256))
     +'</dl>';
   return '<article class="pilot">'
-    +'<header class="case-header"><div class="case-intro"><p class="eyebrow">Selected case · PR #'+PILOT.case.number+'</p>'
+    +'<header class="case-header"><p class="eyebrow">Formal Conjectures PR #'+PILOT.case.number+'</p>'
     +'<h2><a href="'+links.pull_request+'">'+esc(PILOT.case.declaration)+'</a></h2>'
-    +'<p class="case-title">'+esc(PILOT.case.title)+'.</p><p class="case-selection">Why this case: '+esc(PILOT.case.selection)+'.</p>'
-    +'<nav class="case-actions" aria-label="Case sources"><a class="primary-link" href="'+links.pull_request+'">Open upstream PR</a><a href="'+links.source_file+'">Exact source</a><a href="'+links.linked_proof+'">Linked proof</a><a href="'+links.audit_packet+'">Audit packet</a></nav></div>'
-    +'<dl class="review-summary" aria-label="Case review summary">'
-    +'<div><dt>Evidence</dt><dd><span class="state '+(fresh?'state--current':'state--stale')+'">'+(fresh?'Current':'Stale')+'</span><small>'+(current?'Observed '+esc(current.observed_at):'No current observation')+'</small></dd></div>'
-    +'<div><dt>Upstream PR</dt><dd><span class="state state--open">'+esc(current ? current.state : 'Not observed')+'</span><small>GitHub review state: '+esc(current && current.review_decision ? humanize(current.review_decision) : 'not recorded')+'</small></dd></div>'
-    +'<div class="decision-pending"><dt>Advisory review</dt><dd><strong>'+esc(humanize(advisory))+'</strong><small>Reader-facing synthesis with no authority effect</small></dd></div>'
-    +'<div><dt>Maintainer decision</dt><dd><strong>'+esc(disposition)+'</strong><small>Only a Formal Conjectures maintainer can supply it</small></dd></div></dl></header>'
-    +'<aside class="execution-note"><strong>Replay stopped before a policy verdict</strong><p>Comparator invocation ended in a typed <b>error</b>. Result parsing was not attempted and axiom policy was not evaluated. Terminal text was retained as evidence, never promoted to a failed proof-property verdict.</p></aside>'
-    +'<section class="pilot-section" aria-labelledby="evidence-heading"><div class="pilot-section-h"><div><p class="eyebrow">Evidence</p><h3 id="evidence-heading">What was checked</h3></div><p>Typed outcomes stay attached to exact sources. An execution error is not a mathematical verdict.</p></div>'+path+rows+'</section>'
-    +'<section class="review-boundary" aria-label="Advisory and maintainer outcomes"><div><p class="eyebrow">Advisory ReviewReport</p><h3 class="advisory-value">'+esc(humanize(advisory))+'</h3><p>The report synthesizes the immutable audit and current GitHub observation. It cannot approve or reject the pull request.</p><details class="nonclaim-disclosure"><summary>ReviewReport non-claims</summary><ul class="nonclaims">'+nonclaims+'</ul></details></div>'
-    +'<div><p class="eyebrow">Maintainer disposition</p><h3>'+esc(disposition)+'</h3><p>No maintainer acceptance, rejection, or merge decision is represented here.</p><small>Return to Formal Conjectures for every authoritative action.</small></div></section>'
-    +'<div class="disclosure-stack">'
-    +'<details class="disclosure"><summary><strong>Pinned inputs and replay environment</strong><span>Exact revisions, roots, images, and manifests</span></summary><div class="disclosure-body"><nav class="inspection-links" aria-label="Replay sources"><a href="'+links.historical_run+'">Historical run</a><a href="'+links.lean_eval+'">LeanEval source</a><a href="'+links.comparator_execution+'">Comparator source</a></nav>'+facts+'</div></details>'
+    +'<p class="case-source"><a href="'+links.source_file+'">Exact source at the selected PR head</a></p>'
+    +'<p class="status-sentence"><strong>Evidence '+(fresh?'is current':'is stale')+'.</strong> Advisory review is <span class="needs-attention">'+esc(advisoryLabel)+'</span>. Maintainer decision is '+esc(disposition.toLowerCase())+'.</p></header>'
+    +'<div class="finding-list">'
+    +'<section class="finding" aria-labelledby="what-happened"><h3 id="what-happened">1. What happened</h3><p>A pinned metadata check passed. The independent replay then stopped with an execution <strong>error</strong> before it produced a structured result, so no proof-property conclusion was reached.</p></section>'
+    +'<section class="finding" aria-labelledby="review-finding"><h3 id="review-finding">2. Review finding</h3><p><strong class="advisory-value">'+esc(advisorySentence)+'.</strong> The selected source identity and retained metadata result are confirmed, but the replay produced no result to evaluate. This advisory report cannot approve, reject, or declare the pull request merge-ready.</p></section>'
+    +'<section class="finding" aria-labelledby="maintainer-decision"><h3 id="maintainer-decision">3. Maintainer decision</h3><p><strong>'+esc(disposition)+'.</strong> No maintainer acceptance, rejection, or merge decision is represented here. Only Formal Conjectures maintainers decide the upstream pull request.</p><p class="finding-note">GitHub review state: '+esc(current && current.review_decision ? humanize(current.review_decision).toLowerCase() : 'not recorded')+'. <a href="'+links.pull_request+'">Continue at Formal Conjectures PR #'+PILOT.case.number+'</a>.</p></section></div>'
+    +'<div class="disclosure-stack" aria-label="Secondary case detail">'
+    +'<details class="disclosure"><summary><strong>Evidence and replay details</strong><span>Typed outcomes and exact replay pins</span></summary><div class="disclosure-body"><section class="evidence-subsection"><h4>Outcome chain</h4><p>Exact sources and typed results. An execution error is not a proof verdict.</p><nav class="inspection-links" aria-label="Replay sources"><a href="'+links.historical_run+'">Historical run</a><a href="'+links.lean_eval+'">LeanEval source</a><a href="'+links.comparator_execution+'">Comparator source</a></nav>'+rows+'</section><details class="pin-disclosure"><summary>Exact replay pins</summary>'+facts+'</details><details class="nonclaim-disclosure"><summary>ReviewReport non-claims</summary><ul class="nonclaims">'+nonclaims+'</ul></details></div></details>'
     +'<details class="disclosure"><summary><strong>Preservation and freshness</strong><span>Scheduled recurrence and drift behavior</span></summary><div class="disclosure-body"><div class="recurrence">'+outcome(current ? current.freshness : 'not observed')+'<p>'+(fresh?'The live PR head still matches the frozen audit head.':'The live PR head does not match the frozen audit head. Existing findings were not reinterpreted.')+'<small>'+(current ? 'Observed '+esc(current.observed_at)+'. ' : '')+'The scheduled build regenerates the GitHub observation and validates retained report, preparation, outcome, and execution-manifest bytes.</small></p></div></div></details>'
     +'<details class="disclosure"><summary><strong>Method and authority</strong><span>Protocol #4394, pilot success, and non-goals</span></summary><div class="disclosure-body">'+renderMethodBody()+'</div></details></div>'
     +'</article>';
 }
 
 function renderMethodBody(){
-  return '<p class="method-intro">The workbench follows <a href="'+PILOT.links.protocol+'">Formal Conjectures issue #4394</a>. It is a bounded reading surface for one calibration case, designed to reduce maintainer review effort without creating a second authority or evidence silo.</p>'
+  return '<p class="method-intro">The workbench follows <a href="'+PILOT.links.protocol+'">Formal Conjectures issue #4394</a>. It is a bounded reading surface for one calibration case, designed to reduce maintainer review effort without creating a second authority or evidence silo. <a href="__BOARD_REPO__">Board source</a>.</p>'
     +'<ol class="loop"><li><div><h3>Canonical metadata</h3><p>Start from the exact Formal Conjectures PR head, declaration, proof link, and conditions. Formal Conjectures remains canonical for declarations and repository policy.</p></div></li>'
     +'<li><div><h3>Consumers and checks</h3><p>Bind LeanEval-shaped workspace inputs and Comparator execution to exact source, file, tool, and environment identities. Record typed pass, fail, error, unavailable, and not-evaluated states without reading verdicts from terminal prose.</p></div></li>'
     +'<li><div><h3>Advisory reviewer report</h3><p>Collect checked facts, limitations, and current GitHub state in a ReviewReport. Advisory synthesis stays separate from maintainer disposition. An independent non-author pilot remains an external gate.</p></div></li>'
@@ -1305,12 +1249,14 @@ function renderStrip(){
 function render(){
   const recs = DATA.filter(matches);
   if (DATA_VIEWS.has(state.view)) countEl.textContent = recs.length === DATA.length ? DATA.length+' open PRs' : recs.length+' of '+DATA.length+' open PRs';
-  app.innerHTML = state.view === 'pilot' ? renderPilot()
+  const content = state.view === 'pilot' ? renderPilot()
     : state.view === 'method' ? renderMethod()
     : state.view === 'queue' ? renderQueue(recs)
     : state.view === 'pick' ? renderPick()
     : state.view === 'fidelity' ? renderFidelity(recs)
     : state.view === 'pr-audits' ? renderPrAudits() : renderAll(recs);
+  app.innerHTML = state.view === 'pilot' ? content
+    : '<button class="secondary-back" type="button" data-switch-view="pilot">← Current case</button>'+content;
   app.querySelectorAll('button.sorter').forEach(button => button.addEventListener('click', () => {
     const c = button.dataset.col;
     if (state.sort.col === c) state.sort.dir = state.sort.dir === 'asc' ? 'desc' : 'asc';
@@ -1318,16 +1264,14 @@ function render(){
     syncUrl(); render();
   }));
   app.querySelectorAll('[data-reset]').forEach(b => b.addEventListener('click', resetAll));
+  app.querySelectorAll('[data-switch-view]').forEach(b => b.addEventListener('click', () => selectView(b.dataset.switchView)));
 }
 function updateTabs(){ document.querySelectorAll('[data-view]').forEach(b => {
   const active = b.dataset.view === state.view;
   b.classList.toggle('active', active);
-  if (b.classList.contains('tab')) { b.setAttribute('aria-selected', active); b.tabIndex = active ? 0 : -1; }
-  else if (b.classList.contains('more-tab')) b.setAttribute('aria-current', active ? 'page' : 'false');
+  if (b.classList.contains('more-tab')) b.setAttribute('aria-current', active ? 'page' : 'false');
 });
-  const secondary = TAB_SPECS.find(([key]) => key === state.view && !PRIMARY_VIEWS.has(key));
-  viewMoreEl.classList.toggle('is-active', !!secondary);
-  viewMoreLabelEl.textContent = secondary ? secondary[1] : 'More';
+  viewMoreLabelEl.textContent = 'Other tools';
 }
 function updateViewChrome(){
   const dataView = DATA_VIEWS.has(state.view);
@@ -1357,20 +1301,9 @@ function selectView(view){
   app.focus({preventScroll:true});
 }
 function buildToolbar(){
-  tabsEl.innerHTML = TAB_SPECS.filter(([key]) => PRIMARY_VIEWS.has(key))
-    .map(([k, l]) => '<button class="tab" role="tab" data-view="'+k+'">'+l+'</button>').join('');
-  moreViewsEl.innerHTML = TAB_SPECS.filter(([key]) => !PRIMARY_VIEWS.has(key))
+  moreViewsEl.innerHTML = TAB_SPECS.filter(([key]) => ['queue','all','pr-audits','method'].includes(key))
     .map(([k, l]) => '<button class="more-tab" type="button" data-view="'+k+'">'+l+'</button>').join('');
   document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => selectView(b.dataset.view)));
-  document.querySelectorAll('[data-switch-view]').forEach(b => b.addEventListener('click', () => selectView(b.dataset.switchView)));
-  tabsEl.addEventListener('keydown', event => {
-    if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
-    const tabs = [...tabsEl.querySelectorAll('.tab')], current = tabs.indexOf(document.activeElement);
-    if (current < 0) return;
-    let next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1
-      : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
-    event.preventDefault(); tabs[next].focus(); tabs[next].click();
-  });
   const groups = FACETS.filter(f => f.group !== 'audit' || META.hasAudit);
   filterbarEl.innerHTML = groups.map(f =>
     '<div class="fdd" data-group="'+f.group+'"><button class="fbtn" type="button" aria-haspopup="true" aria-expanded="false">'
@@ -1387,8 +1320,14 @@ function buildToolbar(){
     syncUrl(); updateFilterUI(); render(); }));
   el('clearBtn').addEventListener('click', resetAll);
   searchEl.addEventListener('input', () => { state.q = searchEl.value.trim(); syncUrl(); updateFilterUI(); render(); });
-  document.addEventListener('click', closeMenus);
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMenus(); });
+  document.addEventListener('click', e => {
+    closeMenus();
+    if (!viewMoreEl.contains(e.target)) viewMoreEl.open = false;
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') {
+    closeMenus();
+    if (viewMoreEl.open) { viewMoreEl.open = false; viewMoreLabelEl.focus(); }
+  }});
 }
 function resetAll(){ state.q = ''; searchEl.value = '';
   state.facets = {audit:new Set(), kind:new Set(), coll:new Set(), ci:new Set()}; closeMenus(); syncUrl(); updateFilterUI(); render(); }

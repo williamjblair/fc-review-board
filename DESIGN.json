@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-17T23:20:00Z",
+  "generatedAt": "2026-08-17T23:50:00Z",
   "title": "Design System: Open Formal Workflows: Formal Conjectures Review, Verification & Preservation",
   "extensions": {
     "colorMeta": {
@@ -52,20 +52,12 @@
   },
   "components": [
     {
-      "name": "Active Tab",
-      "kind": "nav",
-      "refersTo": "tab-active",
-      "description": "Current primary reviewer task with a restrained underline.",
-      "html": "<button class=\"ds-tab-active\" aria-selected=\"true\">Case review</button>",
-      "css": ".ds-tab-active { font: 680 13px/1.5 system-ui, sans-serif; padding: 9px 11px 10px; border: 0; border-bottom: 2px solid var(--accent); background: transparent; color: var(--ink0); } .ds-tab-active:hover { color: var(--accent); } .ds-tab-active:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }"
-    },
-    {
-      "name": "Current Status Chip",
-      "kind": "chip",
-      "refersTo": "status-chip",
-      "description": "Text plus color marker for evidence freshness.",
-      "html": "<span class=\"ds-state-current\"><span aria-hidden=\"true\"></span>Current</span>",
-      "css": ".ds-state-current { display: inline-flex; align-items: center; gap: 6px; color: var(--ink0); font: 680 13px/1.5 system-ui, sans-serif; } .ds-state-current span { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }"
+      "name": "Secondary Text Button",
+      "kind": "button",
+      "refersTo": "text-button",
+      "description": "Quiet navigation to non-primary review tools.",
+      "html": "<button class=\"ds-text-button\" type=\"button\">Review queue</button>",
+      "css": ".ds-text-button { padding: 2px 0; border: 0; background: transparent; color: var(--accent); font: 12px/1.5 system-ui, sans-serif; text-decoration: underline; text-underline-offset: 3px; } .ds-text-button:hover { color: var(--ink0); } .ds-text-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }"
     },
     {
       "name": "Search Input",
@@ -78,9 +70,9 @@
     {
       "name": "Authority Boundary",
       "kind": "custom",
-      "description": "Persistent but compact authority statement above every view.",
-      "html": "<div class=\"ds-boundary\"><strong>Advisory workspace</strong><span>Formal Conjectures is canonical for declarations, PR state, CI, and maintainer decisions.</span></div>",
-      "css": ".ds-boundary { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--rule); color: var(--ink2); font: 12px/1.5 system-ui, sans-serif; } .ds-boundary strong { color: var(--ink0); font-size: 10px; letter-spacing: .075em; text-transform: uppercase; }"
+      "description": "Persistent one-sentence authority statement above every view.",
+      "html": "<p class=\"ds-boundary\"><strong>Advisory evidence only.</strong> Formal Conjectures is canonical for declarations, pull requests, CI, and maintainer decisions.</p>",
+      "css": ".ds-boundary { max-width: 760px; margin: 0 auto; padding: 13px 0; border-bottom: 1px solid var(--rule); color: var(--ink2); font: 12px/1.5 system-ui, sans-serif; } .ds-boundary strong { color: var(--ink1); }"
     },
     {
       "name": "Evidence Row",
@@ -90,30 +82,30 @@
       "css": ".ds-evidence-row { display: grid; grid-template-columns: 150px minmax(260px, 1fr) 126px; gap: 22px; padding: 13px 0; border-bottom: 1px solid var(--rule); color: var(--ink1); font: 14px/1.5 system-ui, sans-serif; } .ds-evidence-row strong { color: var(--ink0); } .ds-evidence-row small { display: block; color: var(--ink2); } .ds-evidence-row b { display: inline-flex; align-items: center; gap: 7px; color: var(--bad); font-size: 12px; } .ds-evidence-row i { width: 8px; height: 8px; border-radius: 50%; background: var(--bad); } .ds-evidence-row a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }"
     },
     {
-      "name": "Review Summary",
+      "name": "Case Finding",
       "kind": "custom",
-      "description": "Four-row ledger separating evidence freshness, upstream PR state, advisory synthesis, and maintainer disposition.",
-      "html": "<dl class=\"ds-review-summary\"><div><dt>Advisory review</dt><dd><strong>Inconclusive</strong><small>No authority effect</small></dd></div><div><dt>Maintainer decision</dt><dd><strong>Not recorded</strong><small>Formal Conjectures only</small></dd></div></dl>",
-      "css": ".ds-review-summary { margin: 0; border-top: 1px solid var(--rule2); } .ds-review-summary div { display: grid; grid-template-columns: 112px 1fr; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--rule); } .ds-review-summary dt, .ds-review-summary small { color: var(--ink2); font-size: 11.5px; } .ds-review-summary dd { margin: 0; } .ds-review-summary strong, .ds-review-summary small { display: block; }"
+      "description": "One of the three sequential case conclusions, separated by a hairline rule.",
+      "html": "<section class=\"ds-finding\"><h3>2. Review finding</h3><p><strong>Inconclusive.</strong> The replay did not reach a policy verdict.</p></section>",
+      "css": ".ds-finding { padding: 28px 0 30px; border-bottom: 1px solid var(--rule2); } .ds-finding h3 { margin: 0 0 10px; font: 680 20px/1.35 system-ui, sans-serif; } .ds-finding p { max-width: 68ch; margin: 0; color: var(--ink1); font: 15.5px/1.66 system-ui, sans-serif; }"
     },
     {
       "name": "Progressive Disclosure",
       "kind": "custom",
-      "description": "Native disclosure for replay pins, preservation mechanics, and method content.",
-      "html": "<details class=\"ds-disclosure\"><summary><strong>Pinned inputs and replay environment</strong><span>Exact revisions and roots</span></summary></details>",
-      "css": ".ds-disclosure { border-bottom: 1px solid var(--rule2); } .ds-disclosure summary { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; padding: 16px 0; cursor: pointer; } .ds-disclosure summary span { color: var(--ink2); font-size: 12px; }"
+      "description": "Native Accordion/Collapsible primitive for evidence, preservation, and method content.",
+      "html": "<details class=\"ds-disclosure\"><summary><strong>Evidence and replay details</strong><span>Typed outcomes and exact revisions</span></summary></details>",
+      "css": ".ds-disclosure { border-bottom: 1px solid var(--rule2); } .ds-disclosure summary { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; padding: 15px 0; cursor: pointer; } .ds-disclosure summary span { color: var(--ink2); font-size: 12px; } .ds-disclosure summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }"
     }
   ],
   "narrative": {
-    "northStar": "The Reviewer Desk",
-    "overview": "One exact pull request and its evidence packet on a clear desk. Identity, freshness, evidence, advisory conclusion, and maintainer disposition appear before replay internals or protocol.",
-    "keyCharacteristics": ["Task-first and calm", "Five first-screen answers", "Exact identities before interpretation", "Unknown states remain visible", "Dedicated mobile triage rows"],
+    "northStar": "The Case Note",
+    "overview": "One exact pull request presented as a short case note. A status sentence and three sequential findings appear before replay internals or protocol.",
+    "keyCharacteristics": ["Task-first and calm", "One status sentence", "Three sequential findings", "Exact identities before interpretation", "No persistent dashboard navigation"],
     "rules": [
       {"name": "The Evidence Color Rule", "body": "Semantic color describes only the state named beside it and never implies acceptance.", "section": "colors"},
       {"name": "The Identity First Rule", "body": "PRs, declarations, commits, roots, and paths remain readable text.", "section": "typography"},
       {"name": "The Flat Evidence Rule", "body": "Evidence rows, reports, and method steps use rules, not decorative shadow or glass.", "section": "elevation"}
     ],
-    "dos": ["Do keep Formal Conjectures authority visible", "Do answer five reviewer questions before technical detail", "Do show exact source and environment identities close to claims", "Do preserve error, unavailable, stale, and not-evaluated as distinct states"],
+    "dos": ["Do keep Formal Conjectures authority visible", "Do answer case status through three sequential findings", "Do show exact source and environment identities close to claims", "Do preserve error, unavailable, stale, and not-evaluated as distinct states"],
     "donts": ["Don't make method compete with the selected case", "Don't resemble a generic AI-agent control plane", "Don't collapse evidence into approval or merge readiness", "Don't create a Vela-owned source of truth", "Don't show fake partner or Econlib integration logos"]
   }
 }

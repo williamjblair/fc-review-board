@@ -25,18 +25,18 @@ Provide a bounded review, verification, and preservation loop for one calibratio
 
 ## First-Screen Contract
 
-A first-time reviewer should answer five questions without scrolling or opening
-technical detail:
+The default route is one case note, not a dashboard. A first-time reviewer sees
+the exact Formal Conjectures case and source, then one sentence stating evidence
+freshness, advisory review status, and whether a maintainer decision is recorded.
+The body has exactly three sequential findings:
 
-1. What exact Formal Conjectures case is selected?
-2. Does the retained evidence still match the live PR head?
-3. What evidence exists, and where did the replay stop?
-4. What did the advisory ReviewReport conclude?
-5. Has a Formal Conjectures maintainer recorded a disposition?
+1. What happened.
+2. Review finding.
+3. Maintainer decision.
 
-Method, architecture, hashes, tool pins, and recurrence mechanics are secondary
-progressive disclosure. They must remain inspectable without competing with the
-review task.
+Queues, inventories, replay internals, hashes, tool pins, recurrence mechanics,
+and protocol material are secondary links or collapsed native disclosures. They
+remain inspectable without competing with the case decision path.
 
 ## Brand Personality
 
@@ -57,8 +57,8 @@ Forensic, calm, and accountable. The interface should feel like a well-kept lab 
 - Unknown is a first-class state: errors, unavailable evidence, staleness, and unfilled maintainer disposition remain distinct.
 - Reduce maintainer reading time: one selected calibration case, strong information hierarchy, progressive detail, and direct upstream links.
 - Preserve provenance without creating a silo: the board is a disposable advisory projection over source-owned records.
-- Keep navigation task-first: case review, review queue, and all PRs are primary;
-  discovery, inventory, fidelity, and method are secondary.
+- Keep the current case primary. Queue, inventory, discovery, fidelity, and
+  method views are secondary tools rather than persistent navigation.
 - Put actionable review work before approval-recorded, author-blocked, and draft
   queues; keep those states available but collapsed by default.
 
