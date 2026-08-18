@@ -318,10 +318,10 @@ exact pins, and added a direct upstream continuation link. A second independent
 browser pass found no remaining dimension below 95.
 
 The generated page is about 420 KB uncompressed and 59 KB with gzip. Compact
-embedded data improved local throttled Lighthouse performance from 89 to 91;
-accessibility and best practices score 100. The local performance score includes
-Python's uncompressed development server, while the public Pages response is
-verified separately after deployment.
+embedded data improved local throttled Lighthouse performance from 89 to 91.
+After deployment, the public GitHub Pages response was verified with gzip and
+scored 99 performance, 100 accessibility, and 100 best practices in Lighthouse,
+with 1.1 s FCP/LCP, 0 ms total blocking time, and no browser-console errors.
 
 The final deterministic Impeccable scan reports one warning and no other
 findings. Its flat-type-hierarchy warning samples the utility sizes 12px through
